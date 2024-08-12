@@ -8,9 +8,34 @@ authors = ["Mischa <mischa@dataworkz.de>"]
 python = "~3.11.0"
 llama-cpp-python = "^0.2.87"
 chromadb = "^0.5.5"
+omegaconf = "^2.3.0"
 
-[tool.poetry.dev-dependencies]
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.7"
+pytest = "^8.3.2"
 
 [build-system]
 requires = ["poetry-core>=1.0.0"]
 build-backend = "poetry.core.masonry.api"
+
+[tool.ruff]
+line-length = 100
+indent-width = 4
+
+
+[tool.ruff.lint]
+select = ["E", "F", "I"]
+
+
+[tool.ruff.lint.isort]
+force-sort-within-sections = true
+
+
+[tool.ruff.lint.pydocstyle]
+convention = "google"
+
+
+[tool.ruff.format]
+quote-style = "double"
+indent-style = "space"
+docstring-code-format = true
