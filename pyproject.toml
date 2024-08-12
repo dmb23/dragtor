@@ -69,7 +69,7 @@ docstring-code-format = true
 [tool.ruff]
 line-length = 100
 show-fixes = true
-select = [
+lint.select = [
     "F",   # Pyflakes
     "W",   # pycodestyle
     "E",   # pycodestyle
@@ -78,7 +78,7 @@ select = [
     "PL",  # Pylint
     "T201", # Print Statement
 ]
-ignore = ["E501"]  # Ruff format takes care of line-too-long
+lint.ignore = ["E501"]  # Ruff format takes care of line-too-long
 
 [tool.kedro_telemetry]
 project_id = "926dfeeead574c77b626444b294ff995"

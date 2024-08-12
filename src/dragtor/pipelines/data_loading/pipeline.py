@@ -9,7 +9,7 @@ def create_pipeline(**kwargs) -> Pipeline:
             node(
                 func=load_jina_reader,
                 inputs="params:addr",
-                outputs="blog_post",
+                outputs="blog_text",
                 name="load_jina_example",
             )
         ]
