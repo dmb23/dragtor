@@ -1,2 +1,5 @@
-hoopers_urls:
-  - "https://www.hoopersbeta.com/library/a2-pulley-manual-for-climbers"
+base_path: "/Users/mischa/Projects/local/dragtor/data/"
+data:
+  jina_cache: "jina_reader/"
+  hoopers_urls:
+    - "https://www.hoopersbeta.com/library/a2-pulley-manual-for-climbers"

@@ -18,4 +18,4 @@ for conf_file in _conf_root.glob("**/*"):
     except (TypeError, IOError):
         pass
 
-config = OmegaConf.merge(_valid_confs)
+config = OmegaConf.merge(*_valid_confs)
