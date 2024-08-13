@@ -12,6 +12,6 @@ def test_full_jina_loading():
     fpath: Path = Path(config.base_path) / config.data.jina_cache / f"jina_{url}.md"
     if fpath.exists() and fpath.is_file():
         fpath.unlink(missing_ok=True)
-    full_text = JinaLoader().load_jina(url)
+    full_text = JinaLoader().load_jina_to_cache(url)
 
     assert len(full_text)

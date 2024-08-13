@@ -1,6 +1,7 @@
 from pathlib import Path
 from typing import Iterable
 
+from loguru import logger
 import requests
 
 from dragtor.config import ConfigurationError, config
@@ -10,6 +11,7 @@ STATUS_OK = 200
 
 class JinaLoader:
     _jina_base = "https://r.jina.ai/"
+    outdir: Path = Path(config.base_path) / config.data.jina_cache
 
     def _load_jina_reader(self, url: str) -> str:
         try:
@@ -27,23 +29,32 @@ class JinaLoader:
 
         return response.text
 
-    def load_jina(self, urls: Iterable[str] | str) -> list[str]:
-        """Load and cache text from Jina Reader API for a list of URLs"""
-        full_texts = []
-        outdir: Path = Path(config.base_path) / config.data.jina_cache
-        if not outdir.is_dir():
-            outdir.mkdir(parents=True)
+    def load_jina_to_cache(self, urls: Iterable[str] | str):
+        """Load text from Jina Reader API for a list of URLs and cache to files"""
+        if not self.outdir.is_dir():
+            self.outdir.mkdir(parents=True)
 
         if isinstance(urls, str):
             urls = [urls]
 
+        counter = 0
         for url in urls:
-            fpath = outdir / f"jina_{url.replace('/', '_')}.md"
+            fpath = self.outdir / f"jina_{url.replace('/', '_')}.md"
             try:
-                full_texts.append(fpath.read_text(encoding="utf8"))
+                fpath.read_text(encoding="utf8")
+                logger.debug("Already cached {url}")
             except IOError:
                 full_text = self._load_jina_reader(url)
                 fpath.write_text(full_text, encoding="utf8")
-                full_texts.append(full_text)
+                logger.debug("Loaded {url} from Jina Reader API")
+                counter += 1
+
+        logger.info("Loaded {counter} urls via Jina Reader API")
+
+    def get_cache(self) -> list[str]:
+        """Get all previously cached text that was loaded to file"""
+        full_texts = []
+        for fpath in self.outdir.glob("*.md"):
+            full_texts.append(fpath.read_text(encoding="utf8"))
 
         return full_texts
