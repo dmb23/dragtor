@@ -42,6 +42,7 @@ class ChromaDBIndex(Index):
 
     def embed_chunks(self, chunks: list[str]) -> None:
         ids = [str(hash(chunk)) for chunk in chunks]
+        # TODO: this creates duplicate documents when run multiple times!
         self.collection.add(documents=chunks, ids=ids)
 
     def query(self, question: str, n_results: int = 5) -> list[str]:

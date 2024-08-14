@@ -5,3 +5,8 @@ data:
     - "https://www.hoopersbeta.com/library/a2-pulley-manual-for-climbers"
 embeddings:
   chroma_path: "chroma_db"
+model:
+  file_path: "/Users/mischa/Projects/local/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+  max_tokens: 512
+  kwargs:
+    n_gpu_layers: 15
