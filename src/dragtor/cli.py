@@ -3,7 +3,7 @@
 import fire
 from loguru import logger
 
-from dragtor import data
+from dragtor import data, embed
 from dragtor.config import config
 
 
@@ -15,15 +15,24 @@ class Cli:
         logger.info("Loaded data successfully")
 
     def index(self):
-        logger.info("index - not implemented")
+        loader = data.JinaLoader()
+        full_texts = loader.get_cache()
+        chunks = embed.Chunker().chunk_texts(full_texts)
 
-    def search(self):
-        logger.info("search - not implemented")
+        index = embed.ChromaDBIndex()
+        index.embed_chunks(chunks)
+        logger.info("Indexed all cached data successfully")
+
+    def search(self, question: str, n_results=5):
+        logger.debug(f'Search content for: "{question}"')
+        index = embed.ChromaDBIndex()
+        results = index.query(question, n_results)
+        logger.info("Found information: {results}".format(results="\n" + "\n".join(results)))
 
     def ask(self):
         logger.info("ask - not implemented")
 
 
-def entry():
+def entrypoint():
     """Ask the dRAGtor your questions about climbing injuries!"""
     fire.Fire(Cli)

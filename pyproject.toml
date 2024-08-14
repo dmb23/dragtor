@@ -5,7 +5,7 @@ description = "An exploration of non-GPU RAG approaches to built an RAG-Doctor"
 authors = ["Mischa <mischa@dataworkz.de>"]
 
 [tool.poetry.scripts]
-dragtor = "dragtor.cli:entry"
+dragtor = "dragtor.cli:entrypoint"
 
 [tool.poetry.dependencies]
 python = "~3.11.0"
