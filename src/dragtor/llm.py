@@ -7,7 +7,7 @@ from dragtor.embed import ChromaDBIndex, Index
 
 
 def _model_loader():
-    return Llama(config.model.file_path, **config.model.kwargs)
+    return Llama(config.model.file_path, verbose=False, **config.model.kwargs)
 
 
 @dataclass
@@ -30,3 +30,13 @@ answer:
         result = self.llm(prompt, max_tokens=config.model.max_tokens)
 
         return result["choices"][0]["text"]
+
+
+"""<|begin_of_text|><|start_header_id|>system<|end_header_id|>
+
+{{ system_prompt }}<|eot_id|><|start_header_id|>user<|end_header_id|>
+
+{{ user_msg_1 }}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
+
+{{ model_answer_1 }}<|eot_id|>
+"""
