@@ -3,8 +3,9 @@
 import fire
 from loguru import logger
 
-from dragtor import data, embed
+from dragtor import data
 from dragtor.config import config
+from dragtor.index.index import Index
 from dragtor.llm import Generator
 
 
@@ -25,16 +26,15 @@ class Cli:
         """Create a Vector Store of embeddings of all loaded sources for retrieval"""
         loader = data.JinaLoader()
         full_texts = loader.get_cache()
-        chunks = embed.Chunker().chunk_texts(full_texts)
 
-        index = embed.ChromaDBIndex()
-        index.embed_chunks(chunks)
+        index = Index()
+        index.index_texts(full_texts)
         logger.info("Indexed all cached data successfully")
 
     def search(self, question: str, n_results=5) -> list[str]:
         """Find helpful information to answer the question"""
+        index = Index()
         logger.debug(f'Search content for: "{question}"')
-        index = embed.ChromaDBIndex()
         results = index.query(question, n_results)
 
         return results
