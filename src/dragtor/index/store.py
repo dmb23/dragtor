@@ -24,6 +24,7 @@ class VectorStore(ABC):
         pass
 
 
+@dataclass
 class ChromaDBStore(VectorStore):
     _db_path: str = str(Path(config.base_path) / config.store.chromadb.path)
     client: chromadb.api.ClientAPI = field(init=False)

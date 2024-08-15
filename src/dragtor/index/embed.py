@@ -20,11 +20,13 @@ class Embedder(ABC):
         return self.ef(documents)
 
 
+@dataclass
 class DefaultEmbedder(Embedder):
     """Use the ChromaDB default embeddings (all-MiniLM-L6-v2 Sentence-Transformers)"""
 
-    def __post_init__(self):
-        self.ef = embedding_functions.DefaultEmbeddingFunction()  # pyright: ignore [reportAttributeAccessIssue]
+    ef: EmbeddingFunction[Documents] = field(
+        init=False, default_factory=embedding_functions.DefaultEmbeddingFunction
+    )
 
 
 class MxbEmbedder(Embedder):

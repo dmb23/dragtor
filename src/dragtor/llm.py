@@ -3,7 +3,7 @@ from dataclasses import dataclass, field
 from llama_cpp import Llama
 
 from dragtor.config import config
-from dragtor.embed import ChromaDBIndex, Index
+from dragtor.index.index import Index
 
 
 def _model_loader():
@@ -22,7 +22,7 @@ question:
 
 answer:
 """
-    index: Index = field(default_factory=ChromaDBIndex)
+    index: Index = field(default_factory=Index)
 
     def query(self, question: str) -> str:
         context = self.index.query(question, 1)[0]

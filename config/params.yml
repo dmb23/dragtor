@@ -5,13 +5,17 @@ data:
     - "https://www.hoopersbeta.com/library/a2-pulley-manual-for-climbers"
 chunking:
   # valid strategies: jina_line [default]
-  strategy: some_strat
+  strategy: default
 embeddings:
   # valid strategies: chromadb [default], mixedbread
-  strategy: mixedbread
-  chroma_path: "chroma_db"
+  strategy: default
 store:
   # valid strategies: chromadb [default]
+  strategy: default
+  chromadb:
+    path: chroma_db
+    # collection_name: some_name
+    reset_on_load: True
 model:
   file_path: "/Users/mischa/Projects/local/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
   max_tokens: 512
