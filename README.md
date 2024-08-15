@@ -27,7 +27,7 @@ I provide a small CLI to interact with the main functionality, most steps can be
 
 ### Bugs
 
-- ChromaDB creates duplicate entries when the same chunk is added multiple times
+- ✅ ~ChromaDB creates duplicate entries when the same chunk is added multiple times~
 - ✅ ~clean output of the LLM, especially hide the loading information (or place it in a debug message)~
 
 ### Managing context for Retrieval
@@ -40,6 +40,7 @@ The blogs from Hoopers beta are long-form on a single topic. Splitting those int
 - Look into alternative embeddings:
     - Jina https://huggingface.co/jinaai/jina-embeddings-v2-base-en
     - Mixedbread https://huggingface.co/mixedbread-ai/deepset-mxbai-embed-de-large-v1
+    - Stella https://huggingface.co/dunzhang/stella_en_400M_v5
 - design better splitting strategy
     - larger chunks (but fewer)?
     - try to chunk by headings?

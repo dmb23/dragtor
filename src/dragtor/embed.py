@@ -2,6 +2,7 @@
 
 from abc import ABC
 from dataclasses import dataclass, field
+import hashlib
 from pathlib import Path
 
 import chromadb
@@ -41,8 +42,7 @@ class ChromaDBIndex(Index):
             self.collection = self.client.create_collection(self.collection_name)
 
     def embed_chunks(self, chunks: list[str]) -> None:
-        ids = [str(hash(chunk)) for chunk in chunks]
-        # TODO: this creates duplicate documents when run multiple times!
+        ids = [hashlib.md5(chunk.encode("utf-8")).hexdigest() for chunk in chunks]
         self.collection.add(documents=chunks, ids=ids)
 
     def query(self, question: str, n_results: int = 5) -> list[str]:
