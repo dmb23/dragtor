@@ -1,3 +1,5 @@
+![Dragtor Logo](https://raw.githubusercontent.com/dmb23/dragtor/main/.github/dragtor.png)
+
 # Codename "dRAGtor"
 
 `dRAGtor` is a personal project to get a better understanding of LLMs and RAG techniques.
@@ -24,6 +26,13 @@ I provide a small CLI to interact with the main functionality, most steps can be
 - use RAG to answer questions
 
 ## Open Issues
+
+### small TODOs
+
+- implement a proper prompt for Llama3.1
+- implement the correct distance function for retrieval
+- create good questions to be answered with the available information.
+    - build reference answers using the full text as context ( ~ 9750 tokens )
 
 ### Bugs
 
