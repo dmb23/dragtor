@@ -18,6 +18,6 @@ store:
     reset_on_load: True
 model:
   file_path: "/Users/mischa/Projects/local/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
-  max_tokens: 512
+  max_tokens: 1024
   kwargs:
     n_gpu_layers: 15
