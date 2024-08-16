@@ -32,7 +32,7 @@ I provide a small CLI to interact with the main functionality, most steps can be
 
 ### small TODOs
 
-- implement a proper prompt for Llama3.1
+- ✅ ~implement a proper prompt for Llama3.1~
 - implement the correct distance function for retrieval
 - create good questions to be answered with the available information.
     - build reference answers using the full text as context ( ~ 9750 tokens )
@@ -49,24 +49,24 @@ The blogs from Hoopers beta are long-form on a single topic. Splitting those int
 - ✅ Understand context length options for local LLMs to have a better feeling for my options
     - I can easily increase the context length, it does not seem to have any effect on load times or memory requirements (tested between 16 and 64000 tokens)
     - current model uses 40ms / 60ms for prompt eval / generation. I.e. 1s / 9 words prompt length; 1s / 5 words answer length.
+- use cosine similarity instead of default L2 ☹️
 - Look into alternative embeddings:
     - Jina https://huggingface.co/jinaai/jina-embeddings-v2-base-en
     - Mixedbread https://huggingface.co/mixedbread-ai/deepset-mxbai-embed-de-large-v1
     - Stella https://huggingface.co/dunzhang/stella_en_400M_v5
-- design better splitting strategy
-    - larger chunks (but fewer)?
-    - try to chunk by headings?
-    - play around with using LLMs to generate summaries for querying?
+- try other splitting strategies
+    - try the usual RecursiveTextSplitter
 - try to use an additional re-ranker
     - sentence transformers https://sbert.net/docs/cross_encoder/usage/usage.html
+    - exists from Mixedbreak
+
+#### experimental strategies
+- generate embeddings from summaries of large parts of content?
+    - embeddings for long-form text might be difficult to align with embeddings of questions
+- JINA offers embeddings for up to 8K tokens - how well does this work?
+- generate summaries of all entries (full blog posts), map those to the question, load the full article as context
 
 
-### The LLM continues to generate after finishing the first answer
-
-- switch to the correct prompt template
-    - write a system prompt
-    - enrich the user prompt
-    - stop the answer at the correct token
 
 ## Possible Extensions
 
@@ -77,11 +77,23 @@ The blogs from Hoopers beta are long-form on a single topic. Splitting those int
     - switch to DuckDB - there might still be issues with persistence?
 - Prompt mangement
     - dspy?
+- Experiment management
+    - MLFlow for tracking
+        - store params, query, candidates, output
+        - param to set if MLFlow should track or not
 
 ## Learnings
 
-- ~Change project structure to Kedro?~
-    - tried that, it was very large overhead for little percieved advantage
-        - custom datasets for all data persistence
-        - overhead with Dataset -> catalog -> pipeline -> node -> actual functionality
-        - not made to be used with Poetry
+### ~Change project structure to Kedro?~
+tried that, it was very large overhead for little percieved advantage
+
+- custom datasets for all data persistence
+- overhead with Dataset -> catalog -> pipeline -> node -> actual functionality
+- not made to be used with Poetry
+
+### ✅ ~The LLM continues to generate after finishing the first answer~
+
+- ✅ switch to the correct prompt template
+    - using `generate_chat_response` works much better in
+        - including a system prompt
+        - finishing the answer at a desired location (when prescribed in system prompt)
