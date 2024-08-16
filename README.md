@@ -1,10 +1,13 @@
-![Dragtor Logo](https://raw.githubusercontent.com/dmb23/dragtor/main/.github/dragtor.png)
+![Dragtor Logo](assets/dragtor.png)
 
 # Codename "dRAGtor"
 
-`dRAGtor` is a personal project to get a better understanding of LLMs and RAG techniques.
-I am building a solution to get grounded LLM advice on climbing-related health and training issues.
+This is a solution to get grounded LLM advice on climbing-related health and training issues.
 All model interactions are meant to run locally, developed for an Mac M1.
+
+> [!CAUTION]
+> This is meant as a techncal project to work with different technologies, not to replace health professionals.
+> Please do not rely on a machine with a lab coat and a stethoscope for your health questions!
 
 ## Getting Started
 ... something something 
