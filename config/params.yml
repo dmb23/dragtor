@@ -3,6 +3,10 @@ data:
   jina_cache: "jina_reader/"
   hoopers_urls:
     - "https://www.hoopersbeta.com/library/a2-pulley-manual-for-climbers"
+    - "https://www.hoopersbeta.com/library/weight-training-and-rock-climbing"
+    - "https://www.hoopersbeta.com/library/how-to-heal-from-a-lumbrical-injury-5-simple-stages-to-recover"
+    - "https://www.hoopersbeta.com/library/flexor-tenosynovitis"
+    - "https://www.hoopersbeta.com/library/will-hangboarding-2x/day-improve-your-climbing-ultimate-revised-breakdown"
 chunking:
   # valid strategies: jina_line [default]
   strategy: default

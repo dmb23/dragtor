@@ -42,14 +42,14 @@ class JinaLoader:
             fpath = self.outdir / f"jina_{url.replace('/', '_')}.md"
             try:
                 fpath.read_text(encoding="utf8")
-                logger.debug("Already cached {url}")
+                logger.debug(f"Already cached {url}")
             except IOError:
                 full_text = self._load_jina_reader(url)
                 fpath.write_text(full_text, encoding="utf8")
-                logger.debug("Loaded {url} from Jina Reader API")
+                logger.debug(f"Loaded {url} from Jina Reader API")
                 counter += 1
 
-        logger.info("Loaded {counter} urls via Jina Reader API")
+        logger.info(f"Loaded {counter} urls via Jina Reader API")
 
     def get_cache(self) -> list[str]:
         """Get all previously cached text that was loaded to file"""
