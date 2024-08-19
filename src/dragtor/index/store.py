@@ -40,9 +40,13 @@ class ChromaDBStore(VectorStore):
             except ValueError:
                 pass
 
+        distance = config.get("store.chromadb.distance", "l2")
         self.collection = self.client.get_or_create_collection(
             collection_name,
             embedding_function=self.embedder.ef,  # pyright: ignore [ reportArgumentType ]
+            metadata={
+                "hnsw:space": distance,
+            },
         )
 
     def add_chunks(self, chunks: list[str]) -> None:

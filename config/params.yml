@@ -8,7 +8,6 @@ chunking:
   strategy: default
 embeddings:
   # valid strategies: chromadb [default], mixedbread
-  strategy: default
 store:
   # valid strategies: chromadb [default]
   strategy: default
@@ -16,6 +15,8 @@ store:
     path: chroma_db
     # collection_name: some_name
     reset_on_load: True
+    # valid distances: l2, ip, cosine
+    distance: cosine
 model:
   file_path: "/Users/mischa/Projects/local/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
   max_tokens: 1024
