@@ -10,12 +10,13 @@ All model interactions are meant to run locally, developed for an Mac M1.
 > Please do not rely on a machine with a lab coat and a stethoscope for your health questions!
 
 ## Getting Started
-... something something 
+Again, mostly meant for experimentation. But allows to use via a CLI when installed via [Poetry](https://python-poetry.org/)
 
-- `poetry`
-- `llama-cpp-python`
+- have a python environment with Pyton 3.11 and `poetry` for package management. A lock file is part of the repo.
+- make sure `llama-cpp-python` runs with some sort of GPU / MPS support on your machine (or bring probably a lot of patience?)
 - download a model
-- `poetry run dragtor` 
+    - I use [a quantized Llama3.1 8B Instruct](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)
+- `poetry run dragtor` to start via the CLI
 
 ## Current Overview
 
@@ -26,14 +27,17 @@ I provide a small CLI to interact with the main functionality, most steps can be
         - use Jina Reader API to easily parse the content
 - split data
 - create vector embeddings
+- store embeddings in a Vector Store
+    - use [Chroma](https://www.trychroma.com/)
 - use RAG to answer questions
+    - use Llama3.1 8B as language model (in smaller quantizations)
 
 ## Open Issues
 
 ### small TODOs
 
 - ✅ ~implement a proper prompt for Llama3.1~
-- implement the correct distance function for retrieval
+- ✅ ~implement the correct distance function for retrieval~
 - create good questions to be answered with the available information.
     - build reference answers using the full text as context ( ~ 9750 tokens )
 
