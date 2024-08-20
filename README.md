@@ -38,7 +38,7 @@ I provide a small CLI to interact with the main functionality, most steps can be
 
 - ✅ ~implement a proper prompt for Llama3.1~
 - ✅ ~implement the correct distance function for retrieval~
-- create good questions to be answered with the available information.
+- ✅ ~create good questions to be answered with the available information.~
     - build reference answers using the full text as context ( ~ 9750 tokens )
 
 ### Bugs
@@ -55,12 +55,12 @@ The blogs from Hoopers beta are long-form on a single topic. Splitting those int
     - current model uses 40ms / 60ms for prompt eval / generation. I.e. 1s / 9 words prompt length; 1s / 5 words answer length.
 - ✅ use cosine similarity instead of default L2 ☹️
 - Look into alternative embeddings:
-    - Jina https://huggingface.co/jinaai/jina-embeddings-v2-base-en
+    -💡 Jina https://huggingface.co/jinaai/jina-embeddings-v2-base-en
     - Mixedbread https://huggingface.co/mixedbread-ai/deepset-mxbai-embed-de-large-v1
     - Stella https://huggingface.co/dunzhang/stella_en_400M_v5
-- try other splitting strategies
+- 💡 try other splitting strategies
     - try the usual RecursiveTextSplitter
-- try to use an additional re-ranker
+- 💡 try to use an additional re-ranker
     - sentence transformers https://sbert.net/docs/cross_encoder/usage/usage.html
     - exists from Mixedbreak
 - give access to a full blog?
