@@ -16,7 +16,7 @@ class DummyReranker(Reranker):
 
 
 def get_reranker() -> Reranker:
-    strat = config.get("reranker.strategy", "default")
+    strat = config._select("reranker.strategy", default="default")
     match strat:
         case "default" | "dummy":
             return DummyReranker()

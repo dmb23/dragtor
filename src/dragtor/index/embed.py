@@ -66,7 +66,7 @@ class MxbEmbedder(Embedder):
 
 def get_embedder() -> Embedder:
     """get the embedder according to config"""
-    strat = config.get("embeddings.strategy", "default")
+    strat = config._select("embeddings.strategy", default="default")
     match strat:
         case "default" | "chromadb":
             return DefaultEmbedder()

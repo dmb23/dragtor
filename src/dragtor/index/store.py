@@ -33,14 +33,16 @@ class ChromaDBStore(VectorStore):
     def __post_init__(self):
         self.client = chromadb.PersistentClient(path=self._db_path)
 
-        collection_name = config.get("store.chromadb.collection_name", "default_collection")
-        if config.get("store.chromadb.reset_on_load", False):
+        collection_name = config._select(
+            "store.chromadb.collection_name", default="default_collection"
+        )
+        if config._select("store.chromadb.reset_on_load", default=False):
             try:
                 self.client.delete_collection(collection_name)
             except ValueError:
                 pass
 
-        distance = config.get("store.chromadb.distance", "l2")
+        distance = config._select("store.chromadb.distance", default="l2")
         self.collection = self.client.get_or_create_collection(
             collection_name,
             embedding_function=self.embedder.ef,  # pyright: ignore [ reportArgumentType ]
@@ -66,7 +68,7 @@ class ChromaDBStore(VectorStore):
 
 
 def get_store() -> VectorStore:
-    match strat := config.get("store.strategy", "default"):
+    match strat := config._select("store.strategy", default="default"):
         case "chromadb" | "default":
             embedder = get_embedder()
             return ChromaDBStore(embedder)

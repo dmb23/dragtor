@@ -1,6 +1,8 @@
+from functools import partial
 from pathlib import Path
+from typing import cast
 
-from omegaconf import OmegaConf
+from omegaconf import DictConfig, OmegaConf
 
 
 class ConfigurationError(Exception):
@@ -19,3 +21,7 @@ for conf_file in _conf_root.glob("**/*"):
         pass
 
 config = OmegaConf.merge(*_valid_confs)
+config = cast(DictConfig, config)
+
+# hooray for Python hacks!
+super(DictConfig, config).__setattr__("_select", partial(OmegaConf.select, config))
