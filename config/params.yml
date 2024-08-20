@@ -11,7 +11,15 @@ chunking:
   # valid strategies: jina_line [default]
   strategy: default
 embeddings:
-  # valid strategies: chromadb [default], mixedbread
+  # valid strategies: chromadb [default], mixedbread, jina
+  strategy: default
+  mixedbread:
+    # max length: ??? (512?)
+    truncate_dim: 1024
+  jina:
+    device: mps
+    # max length: 8192
+    max_seq_length: 1024
 store:
   # valid strategies: chromadb [default]
   strategy: default

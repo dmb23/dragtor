@@ -10,6 +10,14 @@ STATUS_OK = 200
 
 
 class JinaLoader:
+    """Load text content of websites via Jina Reader API.
+
+    This saves the hassle of parsing content of websites manually.
+    This costs API credits, the first million are free.
+
+    Requires `creds.jina` as a key in configuration (credentials.yml) with an API key
+    """
+
     _jina_base = "https://r.jina.ai/"
     outdir: Path = Path(config.base_path) / config.data.jina_cache
 
@@ -29,7 +37,7 @@ class JinaLoader:
 
         return response.text
 
-    def load_jina_to_cache(self, urls: Iterable[str] | str):
+    def load_jina_to_cache(self, urls: Iterable[str] | str) -> None:
         """Load text from Jina Reader API for a list of URLs and cache to files"""
         if not self.outdir.is_dir():
             self.outdir.mkdir(parents=True)

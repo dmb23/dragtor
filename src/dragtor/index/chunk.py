@@ -10,11 +10,11 @@ class Chunker:
         chunk_conf = config.get("chunking", {})
         match chunk_conf.get("strategy", "default"):
             case "jina_lines" | "default":
-                return self._chunk_by_line(texts)
+                return self._chunk_by_paragraph(texts)
             case _:
                 raise IndexStrategyError(f"unknown chunking strategy {chunk_conf.strategy}")
 
-    def _chunk_by_line(self, texts: list[str]) -> list[str]:
+    def _chunk_by_paragraph(self, texts: list[str]) -> list[str]:
         """Chunk the parsed output of Jina Reader by double-newlines"""
         chunks = [chunk for text in texts for chunk in text.split("\n\n")]
         return chunks

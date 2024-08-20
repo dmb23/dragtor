@@ -29,6 +29,23 @@ class DefaultEmbedder(Embedder):
     )
 
 
+@dataclass
+class JinaEmbedder(Embedder):
+    """Embed using the base jina-ai embedding model
+
+    (could be switched to a faster one via jina-embeddings-v2-small-en"""
+
+    _model_path: str = "jinaai/jina-embeddings-v2-base-en"
+
+    def __post_init__(self):
+        self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(  # pyright: ignore [reportAttributeAccessIssue]
+            model_name=self._model_path,
+            device="mps",
+            truncate_dim=1024,
+        )
+
+
+@dataclass
 class MxbEmbedder(Embedder):
     """Embed using a mixedbread-ai embedding model"""
 
@@ -55,5 +72,7 @@ def get_embedder() -> Embedder:
             return DefaultEmbedder()
         case "mixedbread":
             return MxbEmbedder()
+        case "jina":
+            return JinaEmbedder()
         case _:
             raise IndexStrategyError(f"unknown embedding strategy {strat}")
