@@ -56,7 +56,7 @@ class Generator:
 
     def _create_completion(self, question: str) -> str:
         prompt = self._expand_user_prompt(question)
-        result = self.llm(prompt, max_tokens=config.model.max_tokens)
+        result = self.llm(prompt, max_tokens=config.model.max_completion_tokens)
 
         return result["choices"][0]["text"]
 

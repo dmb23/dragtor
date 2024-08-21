@@ -20,6 +20,9 @@ embeddings:
     device: mps
     # max length: 8192
     max_seq_length: 1024
+reranker:
+  # valid strategies: dummy [default], jina
+  strategy: default
 store:
   # valid strategies: chromadb [default]
   strategy: default
@@ -31,6 +34,7 @@ store:
     distance: cosine
 model:
   file_path: "/Users/mischa/Projects/local/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
-  max_tokens: 1024
+  max_completion_tokens: 1024
   kwargs:
     n_gpu_layers: 15
+    n_ctx: 512
