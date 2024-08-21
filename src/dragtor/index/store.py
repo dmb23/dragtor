@@ -24,6 +24,14 @@ class VectorStore(ABC):
         pass
 
 
+def _build_collection_name() -> str:
+    chunk_strat = config._select("chunking.strategy", default="jina_line")
+    embed_strat = config._select("embeddings.strategy", default="chromadb")
+    rerank_strat = config._select("embeddings.strategy", default="no_rerank")
+
+    return "__".join([chunk_strat, embed_strat, rerank_strat])
+
+
 @dataclass
 class ChromaDBStore(VectorStore):
     _db_path: str = str(Path(config.base_path) / config.store.chromadb.path)
@@ -33,9 +41,10 @@ class ChromaDBStore(VectorStore):
     def __post_init__(self):
         self.client = chromadb.PersistentClient(path=self._db_path)
 
-        collection_name = config._select(
-            "store.chromadb.collection_name", default="default_collection"
-        )
+        collection_name = config._select("store.chromadb.collection_name", default=None)
+        if collection_name is None:
+            collection_name = _build_collection_name()
+
         if config._select("store.chromadb.reset_on_load", default=False):
             try:
                 self.client.delete_collection(collection_name)
