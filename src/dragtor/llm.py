@@ -1,18 +1,10 @@
 from dataclasses import dataclass, field
 
 from llama_cpp import Llama
+from loguru import logger
 
 from dragtor.config import config
-from dragtor.index.index import Index
-
-# Llama prompting is included in the chat template when using Llama.cpp
-_llama_prompt = """<|begin_of_text|><|start_header_id|>system<|end_header_id|>
-
-{{ system_prompt }}<|eot_id|><|start_header_id|>user<|end_header_id|>
-
-{{ user_prompt }}<|eot_id|><|start_header_id|>assistant<|end_header_id|>
-
-"""
+from dragtor.index.index import Index, get_index
 
 _default_system_prompt = "You are an assistant who provides advice on health care and training questions for climbers. Please answer questions in 3 paragraphs."
 
@@ -28,14 +20,17 @@ answer:
 
 
 def _model_loader():
-    return Llama(config.model.file_path, verbose=True, **config.model.kwargs)
+    logger.debug("starting initialization of model")
+    llm = Llama(config.model.file_path, **config.model.kwargs)
+    logger.debug("initialized model")
+    return llm
 
 
 @dataclass
 class Generator:
     llm: Llama = field(default_factory=_model_loader)
     user_prompt_template: str = _default_user_prompt_template
-    index: Index = field(default_factory=Index)
+    index: Index = field(default_factory=get_index)
 
     @property
     def system_prompt(self) -> str:
@@ -51,8 +46,10 @@ class Generator:
 
     def _expand_user_prompt(self, question: str) -> str:
         """Infuse a question of the user with context"""
-        context = self.index.query(question, 1)[0]
-        return self.user_prompt_template.format(context=context, question=question)
+        context = "\n".join(self.index.query(question))
+        prompt = self.user_prompt_template.format(context=context, question=question)
+        logger.debug(f"built final prompt:\n{prompt}")
+        return prompt
 
     def _create_completion(self, question: str) -> str:
         prompt = self._expand_user_prompt(question)
@@ -61,6 +58,9 @@ class Generator:
         return result["choices"][0]["text"]
 
     def _create_chat_completion(self, question: str) -> str:
+        prompt = self._expand_user_prompt(question)
+        max_tokens = config._select("model.max_completion_tokens", default=None)
+        logger.debug(f"prompting model for chat completion for {max_tokens} tokens")
         result = self.llm.create_chat_completion(
             messages=[
                 {
@@ -69,9 +69,11 @@ class Generator:
                 },
                 {
                     "role": "user",
-                    "content": self._expand_user_prompt(question),
+                    "content": prompt,
                 },
-            ]
+            ],
+            # max_tokens=max_tokens,
         )
+        logger.debug("finished llm chat completion")
 
         return result["choices"][0]["message"]["content"]

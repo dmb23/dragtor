@@ -1,6 +1,6 @@
 from abc import ABC, abstractmethod
 
-from sentence_transformers import CrossEncoder
+from loguru import logger
 
 from dragtor.config import config
 from dragtor.index import IndexStrategyError
@@ -13,6 +13,9 @@ class Reranker(ABC):
 
 
 class DummyReranker(Reranker):
+    def __init__(self) -> None:
+        logger.debug("initializing Dummy Reranker")
+
     def rerank(self, question, docs: list[str], n_results: int = 0) -> list[str]:
         if n_results == 0:
             n_results = len(docs)
@@ -20,15 +23,10 @@ class DummyReranker(Reranker):
 
 
 class JinaReranker(Reranker):
+    rerank = None
+
     def __init__(self) -> None:
-        self._model = CrossEncoder("jinaai/jina-reranker-v1-turbo-en", trust_remote_code=True)
-
-    def rerank(self, question: str, docs: list[str], n_results: int = 0) -> list[str]:
-        if n_results == 0:
-            n_results = len(docs)
-        results = self._model.rank(question, docs, return_documents=True, top_k=n_results)
-
-        return [res["text"] for res in results]
+        logger.debug("initializing Jina Reranker")
 
 
 def get_reranker() -> Reranker:

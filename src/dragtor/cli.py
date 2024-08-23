@@ -5,7 +5,7 @@ from loguru import logger
 
 from dragtor import data
 from dragtor.config import config
-from dragtor.index.index import Index
+from dragtor.index.index import get_index
 from dragtor.llm import Generator
 
 
@@ -15,6 +15,7 @@ class Cli:
     Fully local RAG for knowledge from various sources about climbing injuries and treatment
     """
 
+    @logger.catch
     def load(self):
         """Load remote data to local files for further processing"""
         urls = config.data.hoopers_urls
@@ -22,23 +23,26 @@ class Cli:
         data.JinaLoader().load_jina_to_cache(urls)
         logger.info("Loaded data successfully")
 
+    @logger.catch
     def index(self):
         """Create a Vector Store of embeddings of all loaded sources for retrieval"""
         loader = data.JinaLoader()
         full_texts = loader.get_cache()
 
-        index = Index()
+        index = get_index()
         index.index_texts(full_texts)
         logger.info("Indexed all cached data successfully")
 
-    def search(self, question: str, n_results=5) -> list[str]:
+    @logger.catch
+    def search(self, question: str) -> list[str]:
         """Find helpful information to answer the question"""
-        index = Index()
+        index = get_index()
         logger.debug(f'Search content for: "{question}"')
-        results = index.query(question, n_results)
+        results = index.query(question)
 
         return results
 
+    @logger.catch
     def ask(self, question: str) -> str:
         """Get an answer to your question based on the existing resources"""
         return Generator().query(question)

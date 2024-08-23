@@ -1,12 +1,14 @@
 base_path: "/Users/mischa/Projects/local/dragtor/data/"
+# allows to use loguru for external loggers
+expose_library_logs: False
 data:
   jina_cache: "jina_reader/"
   hoopers_urls:
     - "https://www.hoopersbeta.com/library/a2-pulley-manual-for-climbers"
-    - "https://www.hoopersbeta.com/library/weight-training-and-rock-climbing"
-    - "https://www.hoopersbeta.com/library/how-to-heal-from-a-lumbrical-injury-5-simple-stages-to-recover"
-    - "https://www.hoopersbeta.com/library/flexor-tenosynovitis"
-    - "https://www.hoopersbeta.com/library/will-hangboarding-2x/day-improve-your-climbing-ultimate-revised-breakdown"
+    # - "https://www.hoopersbeta.com/library/weight-training-and-rock-climbing"
+    # - "https://www.hoopersbeta.com/library/how-to-heal-from-a-lumbrical-injury-5-simple-stages-to-recover"
+    # - "https://www.hoopersbeta.com/library/flexor-tenosynovitis"
+    # - "https://www.hoopersbeta.com/library/will-hangboarding-2x/day-improve-your-climbing-ultimate-revised-breakdown"
 chunking:
   # valid strategies: jina_line [default]
   strategy: default
@@ -14,27 +16,29 @@ embeddings:
   # valid strategies: chromadb [default], mixedbread, jina
   strategy: default
   mixedbread:
-    # max length: ??? (512?)
+    # MXB embeddings are trained on 1024 vecrtor length, but can be truncated
     truncate_dim: 1024
   jina:
     device: mps
     # max length: 8192
-    max_seq_length: 1024
-reranker:
-  # valid strategies: dummy [default], jina
-  strategy: default
+    max_seq_length: 512
 store:
   # valid strategies: chromadb [default]
   strategy: default
+  n_query: 5
   chromadb:
     path: chroma_db
     # collection_name: some_name
-    reset_on_load: True
     # valid distances: l2, ip, cosine
-    distance: cosine
+    distance: l2
+reranker:
+  # valid strategies: dummy [default], jina
+  strategy: default
+  n_ranked: 3
 model:
   file_path: "/Users/mischa/Projects/local/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
-  max_completion_tokens: 1024
+  # max_completion_tokens: 1024
   kwargs:
     n_gpu_layers: 15
-    n_ctx: 512
+    verbose: False
+    # n_ctx: 512

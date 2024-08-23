@@ -5,6 +5,7 @@ from pathlib import Path
 
 import chromadb
 import chromadb.api
+from loguru import logger
 
 from dragtor.config import config
 from dragtor.index import RetrievalError
@@ -45,13 +46,8 @@ class ChromaDBStore(VectorStore):
         if collection_name is None:
             collection_name = _build_collection_name()
 
-        if config._select("store.chromadb.reset_on_load", default=False):
-            try:
-                self.client.delete_collection(collection_name)
-            except ValueError:
-                pass
-
         distance = config._select("store.chromadb.distance", default="l2")
+        logger.debug(f"Using Collection '{collection_name}' with distance '{distance}'")
         self.collection = self.client.get_or_create_collection(
             collection_name,
             embedding_function=self.embedder.ef,  # pyright: ignore [ reportArgumentType ]
@@ -61,6 +57,7 @@ class ChromaDBStore(VectorStore):
         )
 
     def add_chunks(self, chunks: list[str]) -> None:
+        chunks = list(set(chunks))
         ids = [hashlib.md5(chunk.encode("utf-8")).hexdigest() for chunk in chunks]
         embeddings = self.embedder.ef(chunks)
         self.collection.add(documents=chunks, ids=ids, embeddings=embeddings)
@@ -69,8 +66,9 @@ class ChromaDBStore(VectorStore):
         embedding = self.embedder.embed_query(question)
         results = self.collection.query(query_embeddings=[embedding], n_results=n_results)
         try:
-            # only a single document is queried
+            # only a single embedding (of a single question) is queried
             documents = results["documents"][0]  # pyright: ignore [ reportOptionalSubscript ]
+            logger.debug(f"collected {len(results)} results from ChromaDB")
         except TypeError:
             raise RetrievalError("No documents were returned for query %s", question)
         return documents

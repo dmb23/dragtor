@@ -128,3 +128,17 @@ tried that, it was very large overhead for little percieved advantage
 ### it is possible to generate images using FLUX.1 on a Laptop
 
 yes, `dragtor.png` is generated on a Mac M1.
+
+
+---
+
+## Ideas:
+
+- loading sentence_tranfsormers and querying an LLM model creates a segfault. Maybe downgrade torch?
+    - super wierd: importing sentence_transformers in an imported sub-module creates a segfault. Importing it directly in llm.py does not.
+    - it seems I can switch to transformers instead of sentence_transformers (thereby evading torch), and do not get the segfaults.
+
+- use a model to split blogs into sessions
+- use a model to extract pieces of information on relevant topics from a text
+    - use a model to identify relevant topics for a given text
+    - use a model to check if the model was making up pieces of information

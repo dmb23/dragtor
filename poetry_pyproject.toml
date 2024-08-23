@@ -1,30 +1,29 @@
-[project]
+[tool.poetry]
 name = "dragtor"
 version = "0.1.0"
 description = "An exploration of non-GPU RAG approaches to built an RAG-Doctor"
-readme = "README.md"
-requires-python = ">=3.11, <3.12"
-dependencies = [
-    "llama-cpp-python>=0.2.89",
-    "chromadb>=0.5.5",
-    "omegaconf>=2.3.0",
-    "loguru>=0.7.2",
-    "fire>=0.6.0",
-]
+authors = ["Mischa <mischa@dataworkz.de>"]
 
-[project.scripts]
+[tool.poetry.scripts]
 dragtor = "dragtor.cli:entrypoint"
 
-[build-system]
-requires = ["hatchling"]
-build-backend = "hatchling.build"
+[tool.poetry.dependencies]
+python = "~3.11.0"
+llama-cpp-python = "^0.2.87"
+chromadb = "^0.5.5"
+omegaconf = "^2.3.0"
+loguru = "^0.7.2"
+fire = "^0.6.0"
+sentence-transformers = "^3.0.1"
 
-[tool.uv]
-dev-dependencies = [
-    "ruff>=0.6.1",
-    "pytest>=8.3.2",
-    "debugpy>=1.8.5",
-]
+[tool.poetry.group.dev.dependencies]
+ruff = "^0.5.7"
+pytest = "^8.3.2"
+debugpy = "^1.8.5"
+
+[build-system]
+requires = ["poetry-core>=1.0.0"]
+build-backend = "poetry.core.masonry.api"
 
 [tool.ruff]
 line-length = 100

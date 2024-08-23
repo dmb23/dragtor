@@ -25,6 +25,7 @@ def test_default_embedder(documents: list[str], query: str):
     assert len(doc_embs[0]) == len(query_embs)
 
 
+@pytest.mark.skip(reason="requires pytorch, which causes a segfault with llama-cpp-python")
 def test_jina_embedder(documents: list[str], query: str):
     e = embed.JinaEmbedder()
 
@@ -35,6 +36,7 @@ def test_jina_embedder(documents: list[str], query: str):
     assert len(doc_embs[0]) == len(query_embs)
 
 
+@pytest.mark.skip(reason="requires pytorch, which causes a segfault with llama-cpp-python")
 def test_mxb_embedder(documents: list[str], query: str):
     e = embed.MxbEmbedder()
 

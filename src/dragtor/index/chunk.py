@@ -18,3 +18,7 @@ class Chunker:
         """Chunk the parsed output of Jina Reader by double-newlines"""
         chunks = [chunk for text in texts for chunk in text.split("\n\n")]
         return chunks
+
+
+def get_chunker() -> Chunker:
+    return Chunker()

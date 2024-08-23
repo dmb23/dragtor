@@ -29,39 +29,41 @@ class DefaultEmbedder(Embedder):
     )
 
 
-@dataclass
-class JinaEmbedder(Embedder):
-    """Embed using the base jina-ai embedding model
-
-    (could be switched to a faster one via jina-embeddings-v2-small-en"""
-
-    _model_path: str = "jinaai/jina-embeddings-v2-base-en"
-
-    def __post_init__(self):
-        self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(  # pyright: ignore [reportAttributeAccessIssue]
-            model_name=self._model_path,
-            device="mps",
-            truncate_dim=1024,
-        )
-
-
-@dataclass
-class MxbEmbedder(Embedder):
-    """Embed using a mixedbread-ai embedding model"""
-
-    _model_path: str = "mixedbread-ai/mxbai-embed-large-v1"
-
-    def __post_init__(self):
-        self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(  # pyright: ignore [reportAttributeAccessIssue]
-            model_name=self._model_path,
-            truncate_dim=1024,
-        )
-
-    def embed_query(self, query: Document) -> Embedding:
-        """Specific format required to embed queries for MixedbreadAI"""
-        adj_query = f"Represent this sentence for searching relevant passages: {query}"
-
-        return self.ef([adj_query])[0]
+# @dataclass
+# class JinaEmbedder(Embedder):
+#     """Embed using the base jina-ai embedding model
+#
+#     (could be switched to a faster one via jina-embeddings-v2-small-en"""
+#
+#     _model_path: str = "jinaai/jina-embeddings-v2-base-en"
+#
+#     def __post_init__(self):
+#         # trust_remote_code is needed to use the encode method
+#         self._model = transformers.AutoModel.from_pretrained(
+#             "jinaai/jina-embeddings-v2-base-en", trust_remote_code=True
+#         )
+#         max_length = config._select("embeddings.jina.max_seq_length", default=1024)
+#         self.ef = partial(self._model.encode, max_length=max_length)
+#         logger.debug(f"initialized jina embeddings with maximum seq length {max_length}")
+#
+#
+# @dataclass
+# class MxbEmbedder(Embedder):
+#     """Embed using a mixedbread-ai embedding model"""
+#
+#     _model_path: str = "mixedbread-ai/mxbai-embed-large-v1"
+#
+#     def __post_init__(self):
+#         self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(  # pyright: ignore [reportAttributeAccessIssue]
+#             model_name=self._model_path,
+#             truncate_dim=1024,
+#         )
+#
+#     def embed_query(self, query: Document) -> Embedding:
+#         """Specific format required to embed queries for MixedbreadAI"""
+#         adj_query = f"Represent this sentence for searching relevant passages: {query}"
+#
+#         return self.ef([adj_query])[0]
 
 
 def get_embedder() -> Embedder:
@@ -70,9 +72,9 @@ def get_embedder() -> Embedder:
     match strat:
         case "default" | "chromadb":
             return DefaultEmbedder()
-        case "mixedbread":
-            return MxbEmbedder()
-        case "jina":
-            return JinaEmbedder()
+        # case "mixedbread":
+        #     return MxbEmbedder()
+        # case "jina":
+        #     return JinaEmbedder()
         case _:
             raise IndexStrategyError(f"unknown embedding strategy {strat}")
