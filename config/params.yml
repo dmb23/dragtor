@@ -36,9 +36,10 @@ reranker:
   strategy: default
   n_ranked: 3
 model:
+  # host: 127.0.0.1
+  # port: 8080
   file_path: "/Users/mischa/Projects/local/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
   # max_completion_tokens: 1024
   kwargs:
-    n_gpu_layers: 15
-    verbose: False
-    # n_ctx: 512
+    --gpu-layers: 15
+    --ctx-size: 512
