@@ -6,3 +6,4 @@ models/*
 config/credentials*
 .env
 .vscode/
+.zed
