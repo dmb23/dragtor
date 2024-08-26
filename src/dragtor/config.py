@@ -45,8 +45,21 @@ for conf_file in _conf_root.glob("**/*"):
 config = OmegaConf.merge(*_valid_confs)
 config = cast(DictConfig, config)
 
-# hooray for Python hacks!
-super(DictConfig, config).__setattr__("_select", partial(OmegaConf.select, config))
 
+# hooray for Python hacks!
+def _select_hack(config_obj, *args, **kwargs):
+    match len(args):
+        case 1:
+            return OmegaConf.select(config_obj, key=args[0], **kwargs)
+        case 2:
+            return OmegaConf.select(config_obj, key=args[0], default=args[1], **kwargs)
+        case _:
+            return OmegaConf.select(config_obj, *args, **kwargs)
+
+
+super(DictConfig, config).__setattr__("_select", partial(OmegaConf.select, config))
+super(DictConfig, config).__setattr__("select", partial(_select_hack, config))
+
+# allow to config if logs from libraries should be sent to the loguru handler
 if config._select("expose_library_logs", default=False):
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
