@@ -86,6 +86,12 @@ It would be really powerful (and slow) to run in Agent mode with multiple steps.
 
 ## Possible Extensions
 
+- Chat mode
+    - use the chat endpoint
+    - collect a history of message interactions
+    - always feed a given number of recent messages into the request
+        - e.g. "system, user, assistant, user" to be able to refer to the last 1 message
+
 - Data loading
     - make it possible to extract all pages under `www.hoopersbeta.com/library/`
         - ... that have actual information
