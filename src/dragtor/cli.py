@@ -6,7 +6,7 @@ from loguru import logger
 from dragtor import data
 from dragtor.config import config
 from dragtor.index.index import get_index
-from dragtor.llm import Generator
+from dragtor.llm import LocalDragtor
 
 
 class Cli:
@@ -45,7 +45,7 @@ class Cli:
     @logger.catch
     def ask(self, question: str) -> str:
         """Get an answer to your question based on the existing resources"""
-        return Generator().query(question)
+        return LocalDragtor().answer(question)
 
 
 def entrypoint():

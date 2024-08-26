@@ -34,10 +34,6 @@ class LlamaHandler:
     host: str = field(init=False)
     port: str = field(init=False)
 
-    @property
-    def system_prompt(self) -> str:
-        return config.select("prompts.system", "")
-
     def __post_init__(self):
         self.host = config._select("model.host", default="127.0.0.1")
         port = config._select("model.port", default="8080")
@@ -59,13 +55,6 @@ class LlamaHandler:
             self.port,
         ]
 
-        if len(self.system_prompt) > 0:
-            pieces.extend(
-                [
-                    "-p",
-                    self.system_prompt,
-                ]
-            )
         if len(kwargs):
             for k, v in kwargs.items():
                 pieces.extend([k, str(v)])
@@ -119,7 +108,11 @@ class LocalDragtor:
     user_prompt_template: str = config.select("prompts.user_template")
     index: Index = field(default_factory=get_index)
 
-    def query(self, question: str, **kwargs) -> str:
+    @property
+    def system_prompt(self) -> str:
+        return config.select("prompts.system", "")
+
+    def answer(self, question: str, **kwargs) -> str:
         """Generate an answer to the question, using the available knowledge."""
         prompt = self._expand_user_prompt(question)
         with self.llm:
@@ -127,11 +120,13 @@ class LocalDragtor:
 
         return result
 
-    def _expand_user_prompt(self, question: str) -> str:
+    def _expand_user_prompt(self, question: str, is_chat: bool = False) -> str:
         """Infuse a question of the user with context"""
         context = "\n".join(self.index.query(question))
         prompt = self.user_prompt_template.format(context=context, question=question)
         logger.debug(f"built final prompt:\n{prompt}")
+        if not is_chat and len(self.system_prompt) > 0:
+            prompt = "\n\n".join([self.system_prompt, prompt])
         return prompt
 
     # def _create_chat_completion(self, question: str) -> str:
