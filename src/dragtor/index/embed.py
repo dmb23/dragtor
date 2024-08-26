@@ -1,9 +1,12 @@
 from abc import ABC
 from dataclasses import dataclass, field
+from functools import partial
 
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import Document, Embedding
 from chromadb.utils import embedding_functions
+from loguru import logger
+import transformers
 
 from dragtor.config import config
 from dragtor.index import IndexStrategyError
@@ -29,24 +32,24 @@ class DefaultEmbedder(Embedder):
     )
 
 
-# @dataclass
-# class JinaEmbedder(Embedder):
-#     """Embed using the base jina-ai embedding model
-#
-#     (could be switched to a faster one via jina-embeddings-v2-small-en"""
-#
-#     _model_path: str = "jinaai/jina-embeddings-v2-base-en"
-#
-#     def __post_init__(self):
-#         # trust_remote_code is needed to use the encode method
-#         self._model = transformers.AutoModel.from_pretrained(
-#             "jinaai/jina-embeddings-v2-base-en", trust_remote_code=True
-#         )
-#         max_length = config._select("embeddings.jina.max_seq_length", default=1024)
-#         self.ef = partial(self._model.encode, max_length=max_length)
-#         logger.debug(f"initialized jina embeddings with maximum seq length {max_length}")
-#
-#
+@dataclass
+class JinaEmbedder(Embedder):
+    """Embed using the base jina-ai embedding model
+
+    (could be switched to a faster one via jina-embeddings-v2-small-en"""
+
+    _model_path: str = "jinaai/jina-embeddings-v2-base-en"
+
+    def __post_init__(self):
+        # trust_remote_code is needed to use the encode method
+        self._model = transformers.AutoModel.from_pretrained(
+            "jinaai/jina-embeddings-v2-base-en", trust_remote_code=True
+        )
+        max_length = config._select("embeddings.jina.max_seq_length", default=1024)
+        self.ef = partial(self._model.encode, max_length=max_length)
+        logger.debug(f"initialized jina embeddings with maximum seq length {max_length}")
+
+
 # @dataclass
 # class MxbEmbedder(Embedder):
 #     """Embed using a mixedbread-ai embedding model"""

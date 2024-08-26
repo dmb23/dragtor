@@ -27,7 +27,6 @@ def test_dummy_rerank(docs: list[str], question: str):
     assert len(ranked_docs) == 2
 
 
-@pytest.mark.skip("requires transformers, which causes segfaults with llama-cpp-python")
 def test_jina_rerank(docs: list[str], question: str):
     r = rerank.JinaReranker()
 
