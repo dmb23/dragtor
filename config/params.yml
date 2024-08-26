@@ -43,3 +43,17 @@ model:
   kwargs:
     --gpu-layers: 15
     --ctx-size: 512
+prompts:
+  system: >
+    You are an assistant who provides advice on health care and training questions for climbers.
+    You answer questions in 3 paragraphs.
+  user_template: |
+    Please use the following pieces of context to answer the question.
+    context:
+
+    {context}
+
+    question:
+    {question}
+
+    answer:

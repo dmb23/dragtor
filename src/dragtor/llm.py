@@ -12,25 +12,31 @@ import requests
 from dragtor.config import config
 from dragtor.index.index import Index, get_index
 
-_default_system_prompt = """You are an assistant who provides advice on health care and training questions for climbers.
-Please answer questions in 3 paragraphs."""
-
-_default_user_prompt_template = """Please use the following pieces of context to answer the question.
-context:
-{context}
-
-question:
-{question}
-
-answer:
-"""
-
 
 @dataclass
 class LlamaHandler:
+    """Manage interaction with llama.cpp server
+
+    A server is started in the shell via a subprocess.
+    Then any interaction can just happen via http requests.
+
+    The class is designed so that an instance can be used as a context manager:
+    ```python
+    llm = LlamaHandler(modelpath)
+    with llm:
+        response = llm.query(prompt)
+    ```
+
+    Requires llama.cpp installed and the executables to be findable in a shell.
+    """
+
     modelpath: Path
     host: str = field(init=False)
     port: str = field(init=False)
+
+    @property
+    def system_prompt(self) -> str:
+        return config.select("prompts.system", "")
 
     def __post_init__(self):
         self.host = config._select("model.host", default="127.0.0.1")
@@ -41,6 +47,7 @@ class LlamaHandler:
         self.modelpath = Path(self.modelpath)
 
     def _build_server_command(self) -> str:
+        """Build the shell command to start the llama.cpp server"""
         kwargs = config._select("model.kwargs", default={})
         pieces = [
             "llama-server",
@@ -51,6 +58,14 @@ class LlamaHandler:
             "--port",
             self.port,
         ]
+
+        if len(self.system_prompt) > 0:
+            pieces.extend(
+                [
+                    "-p",
+                    self.system_prompt,
+                ]
+            )
         if len(kwargs):
             for k, v in kwargs.items():
                 pieces.extend([k, str(v)])
@@ -65,7 +80,12 @@ class LlamaHandler:
     def __exit__(self, exc_type, exc_value, traceback):
         self.p.terminate()
 
-    def query(self, prompt: str, **kwargs) -> str:
+    def query_llm(self, prompt: str, **kwargs) -> str:
+        """Send a query to the llama server.
+
+        Will fail if the server is not started,
+        i.e. not run inside a context created by the class.
+        """
         url = f"http://{self.host}:{self.port}/completion"
         headers = {"Content-Type": "application/json"}
         data = {
@@ -92,20 +112,20 @@ class LlamaHandler:
 
 
 @dataclass
-class Generator:
-    # llm: Llama = field(default_factory=_model_loader)
+class LocalDragtor:
+    """Manage user requests by including context information and feeding them to LLMs."""
+
     llm: LlamaHandler = field(default_factory=LlamaHandler.from_config)
-    user_prompt_template: str = _default_user_prompt_template
+    user_prompt_template: str = config.select("prompts.user_template")
     index: Index = field(default_factory=get_index)
 
-    @property
-    def system_prompt(self) -> str:
-        return _default_system_prompt
-
-    def query(self, question: str) -> str:
+    def query(self, question: str, **kwargs) -> str:
         """Generate an answer to the question, using the available knowledge."""
-        # return self._create_chat_completion(question)
-        return self._create_completion(question)
+        prompt = self._expand_user_prompt(question)
+        with self.llm:
+            result = self.llm.query_llm(prompt, **kwargs)
+
+        return result
 
     def _expand_user_prompt(self, question: str) -> str:
         """Infuse a question of the user with context"""
@@ -113,13 +133,6 @@ class Generator:
         prompt = self.user_prompt_template.format(context=context, question=question)
         logger.debug(f"built final prompt:\n{prompt}")
         return prompt
-
-    def _create_completion(self, question: str) -> str:
-        prompt = self._expand_user_prompt(question)
-        with LlamaHandler.from_config() as llm:
-            result = llm.query(prompt)
-
-        return result["choices"][0]["text"]
 
     # def _create_chat_completion(self, question: str) -> str:
     #     prompt = self._expand_user_prompt(question)
