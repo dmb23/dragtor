@@ -39,10 +39,10 @@ model:
   # host: 127.0.0.1
   # port: 8080
   file_path: "/Users/mischa/Projects/local/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
-  # max_completion_tokens: 1024
+  max_completion_tokens: 1024
   kwargs:
     --gpu-layers: 15
-    --ctx-size: 512
+    --ctx-size: 1024
 prompts:
   system: >
     You are an assistant who provides advice on health care and training questions for climbers.

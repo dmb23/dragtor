@@ -45,7 +45,7 @@ class Cli:
     @logger.catch
     def ask(self, question: str) -> str:
         """Get an answer to your question based on the existing resources"""
-        return LocalDragtor().answer(question)
+        return LocalDragtor().chat(question)
 
 
 def entrypoint():

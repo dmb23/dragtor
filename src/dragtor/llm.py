@@ -1,3 +1,4 @@
+from collections import deque
 from dataclasses import dataclass, field
 import json
 from pathlib import Path
@@ -94,6 +95,26 @@ class LlamaHandler:
             logger.error(f"Error querying Llama server: {e}")
             return ""
 
+    def chat_llm(self, messages: list[dict], **kwargs) -> str:
+        url = f"http://{self.host}:{self.port}/chat/completions"
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "messages": messages,
+            "n_predict": config._select("model.max_completion_tokens", default=128),
+        }
+        data.update(kwargs)
+
+        try:
+            response = requests.post(url, headers=headers, data=json.dumps(data))
+            response.raise_for_status()
+            if response.status_code != 200:
+                logger.error(f"Recieved response status {response.status_code}")
+            result = response.json()
+            return result["choices"][0]["message"]["content"]
+        except requests.RequestException as e:
+            logger.error(f"Error querying Llama server: {e}")
+            return ""
+
     @classmethod
     def from_config(cls) -> Self:
         modelpath = config._select("model.file_path", default=None)
@@ -107,6 +128,8 @@ class LocalDragtor:
     llm: LlamaHandler = field(default_factory=LlamaHandler.from_config)
     user_prompt_template: str = config.select("prompts.user_template")
     index: Index = field(default_factory=get_index)
+    _questions: deque = field(init=False, default_factory=deque)
+    _answers: deque = field(init=False, default_factory=deque)
 
     @property
     def system_prompt(self) -> str:
@@ -129,23 +152,24 @@ class LocalDragtor:
             prompt = "\n\n".join([self.system_prompt, prompt])
         return prompt
 
-    # def _create_chat_completion(self, question: str) -> str:
-    #     prompt = self._expand_user_prompt(question)
-    #     max_tokens = config._select("model.max_completion_tokens", default=None)
-    #     logger.debug(f"prompting model for chat completion for {max_tokens} tokens")
-    # result = self.llm.create_chat_completion(
-    #     messages=[
-    #         {
-    #             "role": "system",
-    #             "content": self.system_prompt,
-    #         },
-    #         {
-    #             "role": "user",
-    #             "content": prompt,
-    #         },
-    #     ],
-    #     # max_tokens=max_tokens,
-    # )
-    # logger.debug("finished llm chat completion")
-    #
-    # return result["choices"][0]["message"]["content"]
+    def chat(self, question: str, **kwargs) -> str:
+        """Use the chat interface to answer a question of the user with context"""
+        self._questions.append(question)
+        first_question = self._questions.popleft()
+        first_prompt = self._expand_user_prompt(first_question, is_chat=True)
+        messages = [
+            {
+                "role": "system",
+                "content": self.system_prompt,
+            },
+            {
+                "role": "user",
+                "content": first_prompt,
+            },
+        ]
+        # TODO: append older question / answer pairs if any interface for chat exists
+        with self.llm:
+            result = self.llm.chat_llm(messages, **kwargs)
+        logger.debug("finished llm chat completion")
+
+        return result
