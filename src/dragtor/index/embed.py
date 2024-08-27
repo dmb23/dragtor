@@ -1,12 +1,10 @@
 from abc import ABC
 from dataclasses import dataclass, field
-from functools import partial
 
 from chromadb import Documents, EmbeddingFunction, Embeddings
 from chromadb.api.types import Document, Embedding
 from chromadb.utils import embedding_functions
 from loguru import logger
-import transformers
 
 from dragtor.config import config
 from dragtor.index import IndexStrategyError
@@ -42,11 +40,16 @@ class JinaEmbedder(Embedder):
 
     def __post_init__(self):
         # trust_remote_code is needed to use the encode method
-        self._model = transformers.AutoModel.from_pretrained(
-            "jinaai/jina-embeddings-v2-base-en", trust_remote_code=True
+        self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(
+            model_name="jinaai/jina-embeddings-v2-base-en", trust_remote_code=True
         )
+        # self._model = transformers.AutoModel.from_pretrained(
+        #     "jinaai/jina-embeddings-v2-base-en", trust_remote_code=True
+        # )
         max_length = config._select("embeddings.jina.max_seq_length", default=1024)
-        self.ef = partial(self._model.encode, max_length=max_length)
+        self.ef._model.max_seq_length = (
+            max_length  # self.ef = partial(self._model.encode, max_length=max_length)
+        )
         logger.debug(f"initialized jina embeddings with maximum seq length {max_length}")
 
 
@@ -57,7 +60,7 @@ class JinaEmbedder(Embedder):
 #     _model_path: str = "mixedbread-ai/mxbai-embed-large-v1"
 #
 #     def __post_init__(self):
-#         self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(  # pyright: ignore [reportAttributeAccessIssue]
+#         self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(
 #             model_name=self._model_path,
 #             truncate_dim=1024,
 #         )
@@ -77,7 +80,7 @@ def get_embedder() -> Embedder:
             return DefaultEmbedder()
         # case "mixedbread":
         #     return MxbEmbedder()
-        # case "jina":
-        #     return JinaEmbedder()
+        case "jina":
+            return JinaEmbedder()
         case _:
             raise IndexStrategyError(f"unknown embedding strategy {strat}")

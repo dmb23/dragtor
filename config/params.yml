@@ -14,7 +14,7 @@ chunking:
   strategy: default
 embeddings:
   # valid strategies: chromadb [default], mixedbread, jina
-  strategy: default
+  strategy: jina
   mixedbread:
     # MXB embeddings are trained on 1024 vecrtor length, but can be truncated
     truncate_dim: 1024
@@ -30,10 +30,10 @@ store:
     path: chroma_db
     # collection_name: some_name
     # valid distances: l2, ip, cosine
-    distance: l2
+    distance: cosine
 reranker:
   # valid strategies: dummy [default], jina
-  strategy: default
+  strategy: jina
   n_ranked: 3
 model:
   # host: 127.0.0.1

@@ -55,12 +55,18 @@ class ChromaDBStore(VectorStore):
                 "hnsw:space": distance,
             },
         )
+        logger.debug(f"Collection contains initially {len(self.collection.get()['ids'])} items.")
 
     def add_chunks(self, chunks: list[str]) -> None:
+        n_init = len(self.collection.get()["ids"])
         chunks = list(set(chunks))
         ids = [hashlib.md5(chunk.encode("utf-8")).hexdigest() for chunk in chunks]
         embeddings = self.embedder.ef(chunks)
         self.collection.add(documents=chunks, ids=ids, embeddings=embeddings)
+        n_post = len(self.collection.get()["ids"])
+        logger.debug(
+            f"Tried to add {len(chunks)} new elements to collection, size increased from {n_init} to {n_post}"
+        )
 
     def query(self, question: str, n_results: int = 5) -> list[str]:
         embedding = self.embedder.embed_query(question)
@@ -68,7 +74,7 @@ class ChromaDBStore(VectorStore):
         try:
             # only a single embedding (of a single question) is queried
             documents = results["documents"][0]  # pyright: ignore [ reportOptionalSubscript ]
-            logger.debug(f"collected {len(results)} results from ChromaDB")
+            logger.debug(f"collected {len(documents)} results from ChromaDB")
         except TypeError:
             raise RetrievalError("No documents were returned for query %s", question)
         return documents
