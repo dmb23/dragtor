@@ -50,13 +50,13 @@ class Cli:
         logger.info("Indexed all cached data successfully")
 
     @logger.catch
-    def search(self, question: str) -> list[str]:
+    def search(self, question: str) -> str:
         """Find helpful information to answer the question"""
         index = get_index()
         logger.debug(f'Search content for: "{question}"')
         results = index.query(question)
 
-        return results
+        return "\n---\n".join([f"{i+1}: {r}" for i, r in enumerate(results)])
 
     @logger.catch
     def ask(self, question: str) -> str:
