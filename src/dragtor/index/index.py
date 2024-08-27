@@ -23,7 +23,7 @@ class Index:
         n_ranked = config._select("reranker.n_ranked", default=3)
         _do_rerank = True
         if n_results <= n_ranked:
-            n_results = n_ranked
+            n_ranked = n_results
             _do_rerank = False
 
         logger.debug(
@@ -42,5 +42,5 @@ def get_index() -> Index:
     chunker = get_chunker()
     store = get_store()
     reranker = get_reranker()
-    logger.debug("initialized parts of index")
+    logger.debug("initialized all parts of index")
     return Index(chunker, store, reranker)

@@ -43,33 +43,9 @@ class JinaEmbedder(Embedder):
         self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(
             model_name="jinaai/jina-embeddings-v2-base-en", trust_remote_code=True
         )
-        # self._model = transformers.AutoModel.from_pretrained(
-        #     "jinaai/jina-embeddings-v2-base-en", trust_remote_code=True
-        # )
         max_length = config._select("embeddings.jina.max_seq_length", default=1024)
-        self.ef._model.max_seq_length = (
-            max_length  # self.ef = partial(self._model.encode, max_length=max_length)
-        )
+        self.ef._model.max_seq_length = max_length
         logger.debug(f"initialized jina embeddings with maximum seq length {max_length}")
-
-
-# @dataclass
-# class MxbEmbedder(Embedder):
-#     """Embed using a mixedbread-ai embedding model"""
-#
-#     _model_path: str = "mixedbread-ai/mxbai-embed-large-v1"
-#
-#     def __post_init__(self):
-#         self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(
-#             model_name=self._model_path,
-#             truncate_dim=1024,
-#         )
-#
-#     def embed_query(self, query: Document) -> Embedding:
-#         """Specific format required to embed queries for MixedbreadAI"""
-#         adj_query = f"Represent this sentence for searching relevant passages: {query}"
-#
-#         return self.ef([adj_query])[0]
 
 
 def get_embedder() -> Embedder:
@@ -78,8 +54,6 @@ def get_embedder() -> Embedder:
     match strat:
         case "default" | "chromadb":
             return DefaultEmbedder()
-        # case "mixedbread":
-        #     return MxbEmbedder()
         case "jina":
             return JinaEmbedder()
         case _:
