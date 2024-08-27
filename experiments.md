@@ -1,10 +1,28 @@
 # Experiments on RAG improvements
 
-## role of embeddings and reranking
+## role of embeddings, reranking, ...
 
-### default chunk, l2 distance, dummy reranking
+### default chunk, l2 distance, dummy reranking - test embedding
 
-"How to treat an A2 pulley injury?"
+> "How to treat an A2 pulley injury?"
+
+let's summarize the answers:
+
+| type of chunk | **default embedding** | **jina embedding** |
+| --- | --- | --- |
+| general (non-)information | 1, 2, 3, 5, 9 | 1, 3, 4, 6, 8,  |
+| diagnostic advice | 4, 8 | 7, 9,  |
+| treatment advice | 6(*), 7, 10(*)  | 2(*), 5, 10 |
+
+So switching to the Jina Embeddings does change things, and from N=1 seems to make the results slightly better (jina embeddings include information on H-taping, the best extracted treatment advice)
+
+### default chunk, dummy reranking, jina embeddings - test distance
+
+no difference between l2 and cosine distance in retrieved objects
+
+## Full results
+
+### default chunk, l2 distance, dummy reranking 
 
 | **default embedding** | **jina embedding** |
 | --- | --- |
@@ -18,4 +36,21 @@
 | 8: Speaking of suspecting an injury, an important topic to discuss before we get to testing is “popping”. A lot of people will associate popping with a complete r upture of the A2 pulley. Or they may say “well there was no pop so the injury isn ’t that bad”. Both are incorrect assumptions. You can have a strain or a partial tear and have no pop. Vise-versa, you can have a pop, and have no injury. The pop may simply be a joint cavitation. Think about it. If you slip and place a lot of pressure on your hand, your hand is likely going to change position. You may sta rt to increase the joint space as the force of your body weight pulls it open. Th at change can cause a joint cavitation, just like you would just normally crackin g your knuckles. So, don’t rely on the pop 1 way or another. It is not definitive of an injury. Rather, listen to your body and see if there is immediate pain or discomfort, and perform the following tests!  | 8: I know you guys don’t want to hear about overtraining right off of the bat, so let’s talk about how we will test the A2 pulley if we suspect an injury. We will get into the overtraining aspect when we talk about injury prevention in a later section. |
 | 9: So, why the A2 pulley? Simple mechanics. The crimping position creates an angl e that puts significant stress on the part of the A2 pulley closest to the proxim al interphalangeal joint, which is why it is usually the first to go. In day to d ay use this doesn’t pose a problem, but when we subject our fingers to extraordin ary forces we can exceed the limit the A2 can handle, which can then cause the fl exor tendon to tear partially or completely through the pulley. If the force is g reat enough even the A3, A4, and A5 pulleys could then rupture as well. | 9: Now, most pulley injuries are not going to have observable bowstringing becaus e to truly observe bowstringing with the naked eye, you will likely have to have a rupture of multiple pulleys. An isolated A2 pulley injury (meaning, A3, A4, etc , are all intact) will have bowstringing as seen on a real time ultrasound scan b ut it will be so subtle you will not likely be able to observe it with the naked eye. |
 | 10: Full A2 pulley tear: This requires the most patience and dedication. You shou ld expect to not return to full climbing until at least 3 months post injury. 4 m onths would be even safer before pushing the tissue too hard. You can resume easy climbing after 6-8 weeks BUT this means EASY. My recommendation is to graph out your training over the next 4-6 weeks. Example: | 10: The good news right away is that most complete A2 pulley ruptures don’t requi re surgery. Rather, surgery is likely only indicated when there are ruptures of m ultiple pulleys (A2 & A3, +/- A4, etc). The prognosis with surgery is still fair and you will likely return to climbing, it will simply be a much longer journey. Your first time back on the wall should wait at least 4 months and you won’t be c limbing anything challenging until at least 6 months post surgery. You will be do ing functional training in that time, you simply need to be more cautious and slo w to avoid a failure of the surgical repair or the graft that is used. It can tak e longer than 6 months to feel fully confident in climbing again which is not unc ommon. Take it slowly and work your way back up. |
+
+### default chunk, jina embedding, dummy reranker
+
+No difference in retrieved documents. The distance values however differ, so different distances are actually used...
+
+| **cosine distance** | **l2 distance** |
+| --- | --- |
+| ... | 1: An injury to the A2 pulley could be as simple as a mild strain, or as advanced as a complete rupture of the pulley. In order to better understand and classify our injury, we will look at four main testing criteria and how they can help you identify the severity of your injury. |
+| ... | 2: To prevent an A2 pulley injury, we need to discuss multiple different aspects from safe training, to proper diet, nutrition, and sleep. In this section, we wil l discuss a few important topics in detail and how they paint a big picture to he lp prevent injuries. To start, I want to talk about tissue adaptation and how we can get our pulleys stronger and more resilient to injuries. This is an important overarching topic as it involves multiple categories of prevention. |
+| ... | 3: In this mega video/manual we’re going to go in-depth into the A2 pulley. We wi ll talk about anatomy, the causes of a tear and how to test yourself for it, the things you can do to treat it as well as ways of preventing it from happening in the first place and in the future, and the thing everyone wants to know: how soon can you get back to climbing. |
+| ... | 4: Now you might be thinking, “Okay, so if you put too much force on your pulleys , you get injured. Simple!” And you’d be right, but there’s a bit more to it than that. So let’s move onto the next segment and I’ll explain, because what causes an A2 injury is actually really important for understanding how to avoid injuring it again. |
+| ... | 5: H-taping is supported when you have an A2 pulley injury. I choose to put this in the treatment section rather than prevention, as you should not be using H-tap ing to prevent an initial A2 pulley injury, that breeds bad behaviors. It can pre vent a re-injury, though, which is important to understand. Research has shown th at H-Taping can increase strength of crimping in an injured pulley by 13%. It has not shown to have an effect in an uninjured pulley simply because our uninjured strength exceeds that of the tape. |
+| ... | 6: So, why the A2 pulley? Simple mechanics. The crimping position creates an angl e that puts significant stress on the part of the A2 pulley closest to the proxim al interphalangeal joint, which is why it is usually the first to go. In day to d ay use this doesn’t pose a problem, but when we subject our fingers to extraordin ary forces we can exceed the limit the A2 can handle, which can then cause the fl exor tendon to tear partially or completely through the pulley. If the force is g reat enough even the A3, A4, and A5 pulleys could then rupture as well. |
+| ... | 7: For observation, there are two main factors we will look at: swelling and bows tringing. Bowstringing occurs due to the flexor tendon now being pulled away from the bone. If your finger is extended, you won’t notice it, but if you flex your finger, you may notice the tendon pulling away from the bone, creating the “bowst ring” effect.  If you notice bowstringing, that’s the only test you need, you’re done. You don’t need to do any other tests, you just need to call your doctor's o ffice and get an appointment. You likely completely tore your A2 and A3 pulleys. They will need to do testing and possibly imaging to determine the extent of the damage and plan your course of treatment. |
+| ... | 8: I know you guys don’t want to hear about overtraining right off of the bat, so let’s talk about how we will test the A2 pulley if we suspect an injury. We will get into the overtraining aspect when we talk about injury prevention in a later section. |
+| ... | 9: Now, most pulley injuries are not going to have observable bowstringing becaus e to truly observe bowstringing with the naked eye, you will likely have to have a rupture of multiple pulleys. An isolated A2 pulley injury (meaning, A3, A4, etc , are all intact) will have bowstringing as seen on a real time ultrasound scan b ut it will be so subtle you will not likely be able to observe it with the naked eye. |
+| ... | 10: The good news right away is that most complete A2 pulley ruptures don’t requi re surgery. Rather, surgery is likely only indicated when there are ruptures of m ultiple pulleys (A2 & A3, +/- A4, etc). The prognosis with surgery is still fair and you will likely return to climbing, it will simply be a much longer journey. Your first time back on the wall should wait at least 4 months and you won’t be c limbing anything challenging until at least 6 months post surgery. You will be do ing functional training in that time, you simply need to be more cautious and slo w to avoid a failure of the surgical repair or the graft that is used. It can tak e longer than 6 months to feel fully confident in climbing again which is not unc ommon. Take it slowly and work your way back up. |
 
