@@ -2,10 +2,12 @@
 
 import fire
 from loguru import logger
+from omegaconf import OmegaConf
 
 from dragtor import data
 from dragtor.config import config
 from dragtor.index.index import get_index
+from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor
 
 
@@ -15,6 +17,11 @@ class Cli:
     Fully local RAG for knowledge from various sources about climbing injuries and treatment
     """
 
+    def __init__(self, **kwargs):
+        for k, v in kwargs.items():
+            logger.debug(f"updateing {k} with value {v}")
+            OmegaConf.update(config, k, v)
+
     @logger.catch
     def load(self):
         """Load remote data to local files for further processing"""
@@ -22,6 +29,15 @@ class Cli:
         logger.debug(f"loading the urls:\n{urls}")
         data.JinaLoader().load_jina_to_cache(urls)
         logger.info("Loaded data successfully")
+
+    def clear_index(self):
+        """Reset all data already in the index"""
+        index = get_index()
+        if type(index.store) is not ChromaDBStore:
+            raise ValueError("clear_index only works for a Chroma DB Store!")
+
+        for c in index.store.client.list_collections():
+            index.store.client.delete_collection(c.name)
 
     @logger.catch
     def index(self):

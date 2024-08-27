@@ -4,6 +4,7 @@ import logging
 from pathlib import Path
 from typing import cast
 
+from loguru import logger
 from omegaconf import DictConfig, OmegaConf
 
 
