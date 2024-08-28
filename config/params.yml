@@ -10,11 +10,13 @@ data:
     # - "https://www.hoopersbeta.com/library/flexor-tenosynovitis"
     # - "https://www.hoopersbeta.com/library/will-hangboarding-2x/day-improve-your-climbing-ultimate-revised-breakdown"
 chunking:
-  # valid strategies: jina_line [default]
+  # valid strategies: paragraph [default], jina_tokenizer
   strategy: default
+  jina_tokenizer:
+    max_chunk_length: 1000
 embeddings:
   # valid strategies: chromadb [default], jina
-  strategy: jina
+  strategy: default
   jina:
     device: mps
     # max length: 8192
@@ -25,9 +27,9 @@ store:
   n_query: 10
   chromadb:
     path: chroma_db
-    # collection_name: some_name
+    collection_name: experiment
     # valid distances: l2, ip, cosine
-    distance: cosine
+    distance: l2
 reranker:
   # valid strategies: dummy [default], jina
   strategy: dummy
