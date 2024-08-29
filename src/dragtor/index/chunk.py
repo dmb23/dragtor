@@ -23,7 +23,7 @@ class Chunker(ABC):
         i_latest = 0
         annotations: list[tuple[int, int]] = []
         for chunk in chunks:
-            i_start: int = text.find(chunk, start=i_latest)
+            i_start: int = text.find(chunk, i_latest)
             i_latest = i_start + len(chunk)
             annotation = (i_start, i_latest)
             annotations.append(annotation)

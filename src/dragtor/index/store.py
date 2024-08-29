@@ -80,7 +80,7 @@ class ChromaDBStore(VectorStore):
         return documents
 
 
-def get_store() -> VectorStore:
+def get_store() -> ChromaDBStore:
     match strat := config._select("store.strategy", default="default"):
         case "chromadb" | "default":
             embedder = get_embedder()
