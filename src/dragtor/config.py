@@ -58,9 +58,8 @@ def _select_hack(config_obj, *args, **kwargs):
             return OmegaConf.select(config_obj, *args, **kwargs)
 
 
-super(DictConfig, config).__setattr__("_select", partial(OmegaConf.select, config))
 super(DictConfig, config).__setattr__("select", partial(_select_hack, config))
 
 # allow to config if logs from libraries should be sent to the loguru handler
-if config._select("expose_library_logs", default=False):
+if config.select("expose_library_logs", default=False):
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)

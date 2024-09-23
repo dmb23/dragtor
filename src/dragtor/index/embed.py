@@ -43,14 +43,14 @@ class JinaEmbedder(Embedder):
         self.ef = embedding_functions.SentenceTransformerEmbeddingFunction(
             model_name="jinaai/jina-embeddings-v2-base-en", trust_remote_code=True
         )
-        max_length = config._select("embeddings.jina.max_seq_length", default=1024)
+        max_length = config.select("embeddings.jina.max_seq_length", default=1024)
         self.ef._model.max_seq_length = max_length
         logger.debug(f"initialized jina embeddings with maximum seq length {max_length}")
 
 
 def get_embedder() -> Embedder:
     """get the embedder according to config"""
-    strat = config._select("embeddings.strategy", default="default")
+    strat = config.select("embeddings.strategy", default="default")
     match strat:
         case "default" | "chromadb":
             return DefaultEmbedder()

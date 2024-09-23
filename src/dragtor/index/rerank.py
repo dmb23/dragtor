@@ -36,7 +36,7 @@ class JinaReranker(Reranker):
 
 
 def get_reranker() -> Reranker:
-    strat = config._select("reranker.strategy", default="default")
+    strat = config.select("reranker.strategy", default="default")
     match strat:
         case "default" | "dummy":
             return DummyReranker()

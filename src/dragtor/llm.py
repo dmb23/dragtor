@@ -36,8 +36,8 @@ class LlamaHandler:
     port: str = field(init=False)
 
     def __post_init__(self):
-        self.host = config._select("model.host", default="127.0.0.1")
-        port = config._select("model.port", default="8080")
+        self.host = config.select("model.host", default="127.0.0.1")
+        port = config.select("model.port", default="8080")
         if type(port) is not str:
             port = f"{port:04d}"
         self.port = port
@@ -45,7 +45,7 @@ class LlamaHandler:
 
     def _build_server_command(self) -> str:
         """Build the shell command to start the llama.cpp server"""
-        kwargs = config._select("model.kwargs", default={})
+        kwargs = config.select("model.kwargs", default={})
         pieces = [
             "llama-server",
             "-m",
@@ -80,7 +80,7 @@ class LlamaHandler:
         headers = {"Content-Type": "application/json"}
         data = {
             "prompt": prompt,
-            "n_predict": config._select("model.max_completion_tokens", default=128),
+            "n_predict": config.select("model.max_completion_tokens", default=128),
         }
         data.update(kwargs)
 
@@ -100,7 +100,7 @@ class LlamaHandler:
         headers = {"Content-Type": "application/json"}
         data = {
             "messages": messages,
-            "n_predict": config._select("model.max_completion_tokens", default=128),
+            "n_predict": config.select("model.max_completion_tokens", default=128),
         }
         data.update(kwargs)
 
@@ -117,7 +117,7 @@ class LlamaHandler:
 
     @classmethod
     def from_config(cls) -> Self:
-        modelpath = config._select("model.file_path", default=None)
+        modelpath = config.select("model.file_path", default=None)
         return cls(modelpath)
 
 

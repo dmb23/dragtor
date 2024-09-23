@@ -26,9 +26,9 @@ class VectorStore(ABC):
 
 
 def _build_collection_name() -> str:
-    chunk_strat = config._select("chunking.strategy", default="jina_line")
-    embed_strat = config._select("embeddings.strategy", default="chromadb")
-    rerank_strat = config._select("embeddings.strategy", default="no_rerank")
+    chunk_strat = config.select("chunking.strategy", default="jina_line")
+    embed_strat = config.select("embeddings.strategy", default="chromadb")
+    rerank_strat = config.select("embeddings.strategy", default="no_rerank")
 
     return "__".join([chunk_strat, embed_strat, rerank_strat])
 
@@ -42,11 +42,11 @@ class ChromaDBStore(VectorStore):
     def __post_init__(self):
         self.client = chromadb.PersistentClient(path=self._db_path)
 
-        collection_name = config._select("store.chromadb.collection_name", default=None)
+        collection_name = config.select("store.chromadb.collection_name", default=None)
         if collection_name is None:
             collection_name = _build_collection_name()
 
-        distance = config._select("store.chromadb.distance", default="l2")
+        distance = config.select("store.chromadb.distance", default="l2")
         logger.debug(f"Using Collection '{collection_name}' with distance '{distance}'")
         self.collection = self.client.get_or_create_collection(
             collection_name,
@@ -81,7 +81,7 @@ class ChromaDBStore(VectorStore):
 
 
 def get_store() -> ChromaDBStore:
-    match strat := config._select("store.strategy", default="default"):
+    match strat := config.select("store.strategy", default="default"):
         case "chromadb" | "default":
             embedder = get_embedder()
             return ChromaDBStore(embedder)

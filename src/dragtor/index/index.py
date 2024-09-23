@@ -25,8 +25,8 @@ class Index(ABC):
         pass
 
     def query(self, question: str) -> list[str]:
-        n_results = config._select("store.n_query", default=5)
-        n_ranked = config._select("reranker.n_ranked", default=3)
+        n_results = config.select("store.n_query", default=5)
+        n_ranked = config.select("reranker.n_ranked", default=3)
         _do_rerank = True
         if n_results <= n_ranked:
             n_ranked = n_results
@@ -116,8 +116,8 @@ class LateChunkingIndex(Index):
         return pooled_embeddings
 
     def query(self, question: str) -> list[str]:
-        n_results = config._select("store.n_query", default=5)
-        n_ranked = config._select("reranker.n_ranked", default=3)
+        n_results = config.select("store.n_query", default=5)
+        n_ranked = config.select("reranker.n_ranked", default=3)
         _do_rerank = True
         if n_results <= n_ranked:
             n_ranked = n_results

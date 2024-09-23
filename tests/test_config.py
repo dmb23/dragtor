@@ -1,7 +1,6 @@
 from collections.abc import Iterable
 
 from dragtor.config import config
-import pytest
 
 
 def test_config_exists():
@@ -12,9 +11,6 @@ def test_config_exists():
 def test_config_access():
     assert isinstance(config.base_path, str)
     assert isinstance(config.data.hoopers_urls, Iterable)
-    assert isinstance(config._select("model.file_path"), str)
-    assert config._select("not.existing.variable", default=None) is None
     assert isinstance(config.select("model.file_path"), str)
     assert config.select("not.existing.variable", None) is None
-    with pytest.raises(TypeError):
-        assert config._select("not.existing.variable", None) is None
+    assert config.select("not.existing.variable") is None
