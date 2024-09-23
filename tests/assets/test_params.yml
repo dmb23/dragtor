@@ -3,12 +3,26 @@ data:
   jina_cache: "jina_reader/"
   hoopers_urls:
     - "test_blog"
+embeddings:
+  strategy: default
+store:
+  strategy: default
+  n_query: 3
+  chromadb:
+    path: chroma_db
+    collection_name: testing_collection
+    distance: cosine
+index:
+  strategy: default
+reranker:
+  strategy: default
+  n_ranked: 3
 model:
   # host: 127.0.0.1
   # port: 8080
   file_path: "/Users/mischa/Projects/local/dragtor/models/smollm-135m-instruct-add-basics-q8_0.gguf"
-  max_completion_tokens: 512
+  max_completion_tokens: 64
   kwargs:
     --gpu-layers: -1
     --temp: 0.2
-    --ctx-size: 10000
+    --ctx-size: 2048

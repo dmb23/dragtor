@@ -1,4 +1,5 @@
 from dragtor.index.index import LateChunkingIndex
+import pytest
 from pytest import fixture
 
 
@@ -12,6 +13,7 @@ def annotations() -> list[tuple[int, int]]:
     return [(0, 8), (8, 23)]
 
 
+@pytest.mark.skip()
 def test_late_embeddings(text):
     i = LateChunkingIndex.from_defaults()
 

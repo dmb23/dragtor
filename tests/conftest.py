@@ -35,6 +35,10 @@ def mock_config():
 @pytest.fixture
 def empty_store() -> store.ChromaDBStore:
     vstore = store.get_store()
+    if vstore.client.count_collections() > 1:
+        for collection in vstore.client.list_collections():
+            if collection.name != vstore.collection.name:
+                vstore.client.delete_collection(collection.name)
     if vstore.collection.count() > 0:
         vstore.collection.delete(vstore.collection.get()["ids"])
 
