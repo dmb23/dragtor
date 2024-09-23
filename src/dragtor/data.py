@@ -4,7 +4,7 @@ from typing import Iterable
 from loguru import logger
 import requests
 
-from dragtor.config import ConfigurationError, config
+from dragtor import config
 
 STATUS_OK = 200
 
@@ -18,14 +18,19 @@ class JinaLoader:
     Requires `creds.jina` as a key in configuration (credentials.yml) with an API key
     """
 
-    _jina_base = "https://r.jina.ai/"
-    outdir: Path = Path(config.base_path) / config.data.jina_cache
+    def __init__(self, outdir=None):
+        self._jina_base: str = "https://r.jina.ai/"
+        self.outdir: Path
+        if outdir:
+            self.outdir = Path(outdir)
+        else:
+            self.outdir = Path(config.conf.base_path) / config.conf.data.jina_cache
 
     def _load_jina_reader(self, url: str) -> str:
         try:
-            api_key = config.creds.jina
+            api_key = config.conf.creds.jina
         except AttributeError:
-            raise ConfigurationError("Expect `creds.jina` in configuration")
+            raise config.ConfigurationError("Expect `creds.jina` in configuration")
 
         jina_url = f"{self._jina_base}{url}"
         headers = {"Authorization": f"Bearer {api_key}"}
@@ -63,6 +68,7 @@ class JinaLoader:
         """Get all previously cached text that was loaded to file"""
         full_texts = []
         for fpath in self.outdir.glob("*.md"):
+            logger.warning(fpath)
             full_texts.append(fpath.read_text(encoding="utf8"))
 
         return full_texts

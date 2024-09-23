@@ -1,0 +1,14 @@
+base_path: "/Users/mischa/Projects/local/dragtor/tests/assets"
+data:
+  jina_cache: "jina_reader/"
+  hoopers_urls:
+    - "test_blog"
+model:
+  # host: 127.0.0.1
+  # port: 8080
+  file_path: "/Users/mischa/Projects/local/dragtor/models/smollm-135m-instruct-add-basics-q8_0.gguf"
+  max_completion_tokens: 512
+  kwargs:
+    --gpu-layers: -1
+    --temp: 0.2
+    --ctx-size: 10000

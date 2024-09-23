@@ -7,7 +7,7 @@ from loguru import logger
 import torch
 from transformers import AutoModel, AutoTokenizer
 
-from dragtor.config import config
+from dragtor import config
 from dragtor.index import RetrievalError
 from dragtor.index.chunk import Chunker, get_chunker
 from dragtor.index.rerank import Reranker, get_reranker
@@ -25,8 +25,8 @@ class Index(ABC):
         pass
 
     def query(self, question: str) -> list[str]:
-        n_results = config.select("store.n_query", default=5)
-        n_ranked = config.select("reranker.n_ranked", default=3)
+        n_results = config.conf.select("store.n_query", default=5)
+        n_ranked = config.conf.select("reranker.n_ranked", default=3)
         _do_rerank = True
         if n_results <= n_ranked:
             n_ranked = n_results
@@ -68,9 +68,9 @@ class LateChunkingIndex(Index):
         self.model = AutoModel.from_pretrained(
             "jinaai/jina-embeddings-v2-base-en", trust_remote_code=True
         )
-        if config.select("embeddings.strategy") != "jina":
+        if config.conf.select("embeddings.strategy") != "jina":
             logger.warning(
-                f"Configured embeddings are {config.select('embeddings.strategy')} but LateChunkingIndex always uses Jina embeddings!"
+                f"Configured embeddings are {config.conf.select('embeddings.strategy')} but LateChunkingIndex always uses Jina embeddings!"
             )
 
     def index_texts(self, texts: list[str]) -> None:
@@ -116,8 +116,8 @@ class LateChunkingIndex(Index):
         return pooled_embeddings
 
     def query(self, question: str) -> list[str]:
-        n_results = config.select("store.n_query", default=5)
-        n_ranked = config.select("reranker.n_ranked", default=3)
+        n_results = config.conf.select("store.n_query", default=5)
+        n_ranked = config.conf.select("reranker.n_ranked", default=3)
         _do_rerank = True
         if n_results <= n_ranked:
             n_ranked = n_results
@@ -168,7 +168,7 @@ class LateChunkingIndex(Index):
 
 
 def get_index() -> Index:
-    strat = config.select("index.strategy", "default")
+    strat = config.conf.select("index.strategy", "default")
     match strat:
         case "default" | "basic":
             return BasicIndex.from_defaults()

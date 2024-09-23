@@ -2,7 +2,7 @@ from abc import ABC, abstractmethod
 
 import requests
 
-from dragtor.config import ConfigurationError, config
+from dragtor import config
 
 
 class Chunker(ABC):
@@ -42,7 +42,7 @@ class ParagraphChunker(Chunker):
 
 class JinaTokenizerChunker(Chunker):
     def chunk_and_annotate(self, text: str) -> tuple[list[str], list[tuple[int, int]]]:
-        max_chunk_length = config.select("chunker.jina_tokenizer.max_chunk_length", 1000)
+        max_chunk_length = config.conf.select("chunker.jina_tokenizer.max_chunk_length", 1000)
         # Define the API endpoint and payload
         url = "https://tokenize.jina.ai/"
         payload = {"content": text, "return_chunks": "true", "max_chunk_length": max_chunk_length}
@@ -62,12 +62,12 @@ class JinaTokenizerChunker(Chunker):
 
 
 def get_chunker() -> Chunker:
-    match config.select("chunking.strategy", "default"):
+    match config.conf.select("chunking.strategy", "default"):
         case "default" | "paragraph":
             return ParagraphChunker()
         case "jina_tokenizer":
             return JinaTokenizerChunker()
         case _:
-            raise ConfigurationError(
-                f"invalid strategy to select chunker: {config.select('chunking.strategy')}"
+            raise config.ConfigurationError(
+                f"invalid strategy to select chunker: {config.conf.select('chunking.strategy')}"
             )

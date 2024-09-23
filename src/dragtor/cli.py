@@ -4,8 +4,7 @@ import fire
 from loguru import logger
 from omegaconf import OmegaConf
 
-from dragtor import data
-from dragtor.config import config
+from dragtor import config, data
 from dragtor.index.index import get_index
 from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor
@@ -20,12 +19,12 @@ class Cli:
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
             logger.debug(f"updateing {k} with value {v}")
-            OmegaConf.update(config, k, v)
+            OmegaConf.update(config.conf, k, v)
 
     @logger.catch
     def load(self):
         """Load remote data to local files for further processing"""
-        urls = config.data.hoopers_urls
+        urls = config.conf.data.hoopers_urls
         logger.debug(f"loading the urls:\n{urls}")
         data.JinaLoader().load_jina_to_cache(urls)
         logger.info("Loaded data successfully")

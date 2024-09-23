@@ -7,7 +7,7 @@ import chromadb
 import chromadb.api
 from loguru import logger
 
-from dragtor.config import config
+from dragtor import config
 from dragtor.index import RetrievalError
 from dragtor.index.embed import Embedder, get_embedder
 
@@ -26,27 +26,28 @@ class VectorStore(ABC):
 
 
 def _build_collection_name() -> str:
-    chunk_strat = config.select("chunking.strategy", default="jina_line")
-    embed_strat = config.select("embeddings.strategy", default="chromadb")
-    rerank_strat = config.select("embeddings.strategy", default="no_rerank")
+    chunk_strat = config.conf.select("chunking.strategy", default="jina_line")
+    embed_strat = config.conf.select("embeddings.strategy", default="chromadb")
+    rerank_strat = config.conf.select("embeddings.strategy", default="no_rerank")
 
     return "__".join([chunk_strat, embed_strat, rerank_strat])
 
 
 @dataclass
 class ChromaDBStore(VectorStore):
-    _db_path: str = str(Path(config.base_path) / config.store.chromadb.path)
+    # TODO: check that the initialization runs correctly in testing
+    _db_path: str = str(Path(config.conf.base_path) / config.conf.store.chromadb.path)
     client: chromadb.api.ClientAPI = field(init=False)
     collection: chromadb.Collection = field(init=False)
 
     def __post_init__(self):
         self.client = chromadb.PersistentClient(path=self._db_path)
 
-        collection_name = config.select("store.chromadb.collection_name", default=None)
+        collection_name = config.conf.select("store.chromadb.collection_name", default=None)
         if collection_name is None:
             collection_name = _build_collection_name()
 
-        distance = config.select("store.chromadb.distance", default="l2")
+        distance = config.conf.select("store.chromadb.distance", default="l2")
         logger.debug(f"Using Collection '{collection_name}' with distance '{distance}'")
         self.collection = self.client.get_or_create_collection(
             collection_name,
@@ -81,7 +82,7 @@ class ChromaDBStore(VectorStore):
 
 
 def get_store() -> ChromaDBStore:
-    match strat := config.select("store.strategy", default="default"):
+    match strat := config.conf.select("store.strategy", default="default"):
         case "chromadb" | "default":
             embedder = get_embedder()
             return ChromaDBStore(embedder)

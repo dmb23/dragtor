@@ -3,7 +3,7 @@ from abc import ABC, abstractmethod
 from loguru import logger
 from sentence_transformers import CrossEncoder
 
-from dragtor.config import config
+from dragtor import config
 from dragtor.index import IndexStrategyError
 
 
@@ -36,7 +36,7 @@ class JinaReranker(Reranker):
 
 
 def get_reranker() -> Reranker:
-    strat = config.select("reranker.strategy", default="default")
+    strat = config.conf.select("reranker.strategy", default="default")
     match strat:
         case "default" | "dummy":
             return DummyReranker()

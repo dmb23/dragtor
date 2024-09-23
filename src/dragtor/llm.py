@@ -10,7 +10,7 @@ from typing import Self
 from loguru import logger
 import requests
 
-from dragtor.config import config
+from dragtor import config
 from dragtor.index.index import Index, get_index
 
 
@@ -36,8 +36,8 @@ class LlamaHandler:
     port: str = field(init=False)
 
     def __post_init__(self):
-        self.host = config.select("model.host", default="127.0.0.1")
-        port = config.select("model.port", default="8080")
+        self.host = config.conf.select("model.host", default="127.0.0.1")
+        port = config.conf.select("model.port", default="8080")
         if type(port) is not str:
             port = f"{port:04d}"
         self.port = port
@@ -45,7 +45,7 @@ class LlamaHandler:
 
     def _build_server_command(self) -> str:
         """Build the shell command to start the llama.cpp server"""
-        kwargs = config.select("model.kwargs", default={})
+        kwargs = config.conf.select("model.kwargs", default={})
         pieces = [
             "llama-server",
             "-m",
@@ -80,7 +80,7 @@ class LlamaHandler:
         headers = {"Content-Type": "application/json"}
         data = {
             "prompt": prompt,
-            "n_predict": config.select("model.max_completion_tokens", default=128),
+            "n_predict": config.conf.select("model.max_completion_tokens", default=128),
         }
         data.update(kwargs)
 
@@ -100,7 +100,7 @@ class LlamaHandler:
         headers = {"Content-Type": "application/json"}
         data = {
             "messages": messages,
-            "n_predict": config.select("model.max_completion_tokens", default=128),
+            "n_predict": config.conf.select("model.max_completion_tokens", default=128),
         }
         data.update(kwargs)
 
@@ -117,7 +117,7 @@ class LlamaHandler:
 
     @classmethod
     def from_config(cls) -> Self:
-        modelpath = config.select("model.file_path", default=None)
+        modelpath = config.conf.select("model.file_path", default=None)
         return cls(modelpath)
 
 
@@ -126,14 +126,14 @@ class LocalDragtor:
     """Manage user requests by including context information and feeding them to LLMs."""
 
     llm: LlamaHandler = field(default_factory=LlamaHandler.from_config)
-    user_prompt_template: str = config.select("prompts.user_template")
+    user_prompt_template: str = config.conf.select("prompts.user_template")
     index: Index = field(default_factory=get_index)
     _questions: deque = field(init=False, default_factory=deque)
     _answers: deque = field(init=False, default_factory=deque)
 
     @property
     def system_prompt(self) -> str:
-        return config.select("prompts.system", "")
+        return config.conf.select("prompts.system", "")
 
     def answer(self, question: str, **kwargs) -> str:
         """Generate an answer to the question, using the available knowledge."""

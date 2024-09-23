@@ -43,8 +43,8 @@ for conf_file in _conf_root.glob("**/*"):
     except (TypeError, IOError):
         pass
 
-config = OmegaConf.merge(*_valid_confs)
-config = cast(DictConfig, config)
+conf = OmegaConf.merge(*_valid_confs)
+conf = cast(DictConfig, conf)
 
 
 # hooray for Python hacks!
@@ -58,8 +58,8 @@ def _select_hack(config_obj, *args, **kwargs):
             return OmegaConf.select(config_obj, *args, **kwargs)
 
 
-super(DictConfig, config).__setattr__("select", partial(_select_hack, config))
+super(DictConfig, conf).__setattr__("select", partial(_select_hack, conf))
 
-# allow to config if logs from libraries should be sent to the loguru handler
-if config.select("expose_library_logs", default=False):
+# allow to configure if logs from libraries should be sent to the loguru handler
+if conf.select("expose_library_logs", default=False):
     logging.basicConfig(handlers=[InterceptHandler()], level=0, force=True)
