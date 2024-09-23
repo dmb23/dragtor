@@ -33,10 +33,13 @@ def _build_collection_name() -> str:
     return "__".join([chunk_strat, embed_strat, rerank_strat])
 
 
+def _get_default_db_directory() -> str:
+    return str(Path(config.conf.base_path) / config.conf.store.chromadb.path)
+
+
 @dataclass
 class ChromaDBStore(VectorStore):
-    # TODO: check that the initialization runs correctly in testing
-    _db_path: str = str(Path(config.conf.base_path) / config.conf.store.chromadb.path)
+    _db_path: str = field(default_factory=_get_default_db_directory)
     client: chromadb.api.ClientAPI = field(init=False)
     collection: chromadb.Collection = field(init=False)
 

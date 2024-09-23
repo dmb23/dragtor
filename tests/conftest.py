@@ -2,6 +2,7 @@ from importlib.resources import as_file, files
 
 from _pytest.logging import LogCaptureFixture
 from dragtor import config
+from dragtor.index import store
 from loguru import logger
 from omegaconf import OmegaConf
 import pytest
@@ -29,3 +30,12 @@ def mock_config():
         test_config = OmegaConf.load(test_conf_path)
 
     config.conf.update(test_config)
+
+
+@pytest.fixture
+def empty_store() -> store.ChromaDBStore:
+    vstore = store.get_store()
+    if vstore.collection.count() > 0:
+        vstore.collection.delete(vstore.collection.get()["ids"])
+
+    return vstore
