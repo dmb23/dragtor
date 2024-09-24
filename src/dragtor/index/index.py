@@ -60,7 +60,9 @@ class BasicIndex(Index):
 
 
 class LateChunkingIndex(Index):
+    # TODO: needs more debugging, priorities shifted
     def __init__(self, *args, **kwargs):
+        raise NotImplementedError("WIP, needs to be finished!")
         super().__init__(*args, **kwargs)
         self.tokenizer = AutoTokenizer.from_pretrained(
             "jinaai/jina-embeddings-v2-base-en", trust_remote_code=True
@@ -111,7 +113,7 @@ class LateChunkingIndex(Index):
             token_embeddings[start:end].sum(dim=0) / (end - start)
             for start, end in chunk_token_annotations
         ]
-        pooled_embeddings = [embedding.detach().cpu().numpy() for embedding in pooled_embeddings]
+        pooled_embeddings = [embedding.detach().cpu().tolist() for embedding in pooled_embeddings]
 
         return pooled_embeddings
 

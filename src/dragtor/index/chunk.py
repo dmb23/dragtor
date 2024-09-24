@@ -13,6 +13,12 @@ class Chunker(ABC):
 
     @abstractmethod
     def chunk_and_annotate(self, text: str) -> tuple[list[str], list[tuple[int, int]]]:
+        """Split a single text into chunks.
+
+        Returns:
+            chunks: list of strings
+            annotations: list of tuples of (start,end) position for each chunk
+        """
         pass
 
     def _find_chunks(self, text: str, chunks: list[str]) -> list[tuple[int, int]]:
@@ -41,6 +47,8 @@ class ParagraphChunker(Chunker):
 
 
 class JinaTokenizerChunker(Chunker):
+    """Use JINA tokenizer API for chunking"""
+
     def chunk_and_annotate(self, text: str) -> tuple[list[str], list[tuple[int, int]]]:
         max_chunk_length = config.conf.select("chunker.jina_tokenizer.max_chunk_length", 1000)
         # Define the API endpoint and payload

@@ -1,19 +1,38 @@
-from dragtor.index.index import LateChunkingIndex
+from dragtor.index.index import BasicIndex, LateChunkingIndex
 import pytest
-from pytest import fixture
 
 
-@fixture
+@pytest.fixture
 def text() -> str:
     return "this is a long example text with lots of meaningless information. It includes multiple phrases.\n\nAnd multiple paragraphs, too!"
 
 
-@fixture
+@pytest.fixture
 def annotations() -> list[tuple[int, int]]:
     return [(0, 8), (8, 23)]
 
 
-@pytest.mark.skip()
+# @pytest.mark.parametrize("IndexClass", [BasicIndex, LateChunkingIndex])
+# TODO: fix LateChunkingIndex
+@pytest.mark.parametrize("IndexClass", [BasicIndex])
+class TestIndex:
+    def test_index_loading(self, IndexClass, text: str):
+        i = IndexClass.from_defaults()
+        chunks, _ = i.chunker.chunk_and_annotate(text)
+
+        i.index_texts([text])
+        assert i.store.collection.count() == len(chunks)
+
+    def test_index_query(self, IndexClass, text: str):
+        i = IndexClass.from_defaults()
+        i.index_texts([text])
+
+        res = i.query("empty query prompt")
+        assert len(res) > 0
+        assert type(res) is not str
+
+
+@pytest.mark.skip(reason="Late Chunking is not finished")
 def test_late_embeddings(text):
     i = LateChunkingIndex.from_defaults()
 
