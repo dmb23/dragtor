@@ -16,14 +16,14 @@ def annotations() -> list[tuple[int, int]]:
 # TODO: fix LateChunkingIndex
 @pytest.mark.parametrize("IndexClass", [BasicIndex])
 class TestIndex:
-    def test_index_loading(self, IndexClass, text: str):
+    def test_index_loading(self, IndexClass, text: str, empty_store):
         i = IndexClass.from_defaults()
         chunks, _ = i.chunker.chunk_and_annotate(text)
 
         i.index_texts([text])
         assert i.store.collection.count() == len(chunks)
 
-    def test_index_query(self, IndexClass, text: str):
+    def test_index_query(self, IndexClass, text: str, full_store):
         i = IndexClass.from_defaults()
         i.index_texts([text])
 
