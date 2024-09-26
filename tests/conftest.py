@@ -1,11 +1,12 @@
 from importlib.resources import as_file, files
 
 from _pytest.logging import LogCaptureFixture
-from dragtor import config
-from dragtor.index import store
 from loguru import logger
 from omegaconf import OmegaConf
 import pytest
+
+from dragtor import config
+from dragtor.index import store
 
 
 @pytest.fixture

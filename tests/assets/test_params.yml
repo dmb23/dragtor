@@ -23,6 +23,6 @@ model:
   file_path: "/Users/mischa/Projects/local/dragtor/models/smollm-135m-instruct-add-basics-q8_0.gguf"
   max_completion_tokens: 64
   kwargs:
-    --gpu-layers: -1
-    --temp: 0.2
-    --ctx-size: 2048
+    gpu-layers: -1
+    temp: 0.2
+    ctx-size: 2048
