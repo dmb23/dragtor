@@ -120,15 +120,10 @@ class LlamaServerHandler:
         modelpath = config.conf.select("model.file_path", default=None)
         return cls(modelpath)
 
+
 @dataclass
 class LlamaCliHandler:
     """Manage interaction with llama.cpp using the llama-cli command directly
-
-    Usage:
-    ```python
-    llm = LlamaCliHandler(modelpath)
-    response = llm.query(prompt)
-    ```
 
     Requires llama.cpp installed and the executables to be findable in the system PATH.
     """
@@ -153,7 +148,10 @@ class LlamaCliHandler:
         cli_kwargs.update(kwargs)
 
         for k, v in cli_kwargs.items():
-            pieces.extend([f"--{k}", str(v)])
+            if type(v) is bool and v:
+                pieces.extend([f"--{k}"])
+            else:
+                pieces.extend([f"--{k}", str(v)])
 
         return shlex.join(pieces)
 
@@ -169,10 +167,11 @@ class LlamaCliHandler:
             return ""
 
     @classmethod
-    def from_config(cls) -> 'LlamaCliHandler':
+    def from_config(cls) -> "LlamaCliHandler":
         modelpath = config.conf.select("model.file_path", default=None)
         kwargs = config.conf.select("model.kwargs", default={})
         return cls(modelpath, kwargs)
+
 
 @dataclass
 class LocalDragtor:
