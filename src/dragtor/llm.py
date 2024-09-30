@@ -139,6 +139,23 @@ class LlamaServerHandler:
         except requests.RequestException as e:
             logger.error(f"Error querying Llama server: {e}")
 
+    def _load_state(self, statefile: Path, slot_id: int = 0):
+        """Load a saved state from the llama server"""
+        url = f"{self.url}/slots/{slot_id}?action=restore"
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "filename": statefile.resolve(),
+        }
+
+        try:
+            response = requests.post(url, headers=headers, data=json.dumps(data))
+            response.raise_for_status()
+            if response.status_code != 200:
+                logger.error(f"Recieved response status {response.status_code}")
+            logger.info(response)
+        except requests.RequestException as e:
+            logger.error(f"Error querying Llama server: {e}")
+
     @classmethod
     def from_config(cls) -> Self:
         modelpath = config.conf.select("model.file_path", default=None)

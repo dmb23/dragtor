@@ -9,3 +9,4 @@ config/credentials*
 .vscode/
 .zed
 llama.log
+.aider*
