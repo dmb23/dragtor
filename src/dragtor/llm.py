@@ -32,16 +32,21 @@ class LlamaServerHandler:
     """
 
     modelpath: Path
-    host: str = field(init=False)
-    port: str = field(init=False)
+    _host: str = field(init=False)
+    _port: str = field(init=False)
+    _state_dir: Path = field(init=False)
 
     def __post_init__(self):
-        self.host = config.conf.select("model.host", default="127.0.0.1")
+        self._host = config.conf.select("model.host", default="127.0.0.1")
         port = config.conf.select("model.port", default="8080")
         if type(port) is not str:
             port = f"{port:04d}"
-        self.port = port
+        self._port = port
+        self.url = f"http://{self._host}:{self._port}"
         self.modelpath = Path(self.modelpath)
+        self._state_dir = Path(
+            config.conf.select("model.state_dir", default=f"{config.conf.base_path}/checkpoints")
+        )
 
     def _build_server_command(self) -> str:
         """Build the shell command to start the llama.cpp server"""
@@ -51,9 +56,11 @@ class LlamaServerHandler:
             "-m",
             str(self.modelpath.resolve()),
             "--host",
-            self.host,
+            self._host,
             "--port",
-            self.port,
+            self._port,
+            "--slot-save-path",
+            self._state_dir,
         ]
 
         if len(kwargs):
@@ -76,7 +83,7 @@ class LlamaServerHandler:
         Will fail if the server is not started,
         i.e. not run inside a context created by the class.
         """
-        url = f"http://{self.host}:{self.port}/completion"
+        url = f"{self.url}/completion"
         headers = {"Content-Type": "application/json"}
         data = {
             "prompt": prompt,
@@ -96,7 +103,7 @@ class LlamaServerHandler:
             return ""
 
     def chat_llm(self, messages: list[dict], **kwargs) -> str:
-        url = f"http://{self.host}:{self.port}/chat/completions"
+        url = f"{self.url}/chat/completions"
         headers = {"Content-Type": "application/json"}
         data = {
             "messages": messages,
@@ -114,6 +121,23 @@ class LlamaServerHandler:
         except requests.RequestException as e:
             logger.error(f"Error querying Llama server: {e}")
             return ""
+
+    def _save_state(self, statefile: Path, slot_id: int = 0):
+        """POST to  /slots/{slot_id}?action=save"""
+        url = f"{self.url}/slots/{slot_id}?action=save"
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "filename": statefile.resolve(),
+        }
+
+        try:
+            response = requests.post(url, headers=headers, data=json.dumps(data))
+            response.raise_for_status()
+            if response.status_code != 200:
+                logger.error(f"Recieved response status {response.status_code}")
+            logger.info(response)
+        except requests.RequestException as e:
+            logger.error(f"Error querying Llama server: {e}")
 
     @classmethod
     def from_config(cls) -> Self:
@@ -204,24 +228,18 @@ class LocalDragtor:
             prompt = "\n\n".join([self.system_prompt, prompt])
         return prompt
 
-    def chat(self, question: str, **kwargs) -> str:
-        """Use the chat interface to answer a question of the user with context"""
-        self._questions.append(question)
-        first_question = self._questions.popleft()
-        first_prompt = self._expand_user_prompt(first_question, is_chat=True)
-        messages = [
-            {
-                "role": "system",
-                "content": self.system_prompt,
-            },
-            {
-                "role": "user",
-                "content": first_prompt,
-            },
-        ]
-        # TODO: append older question / answer pairs if any interface for chat exists
-        with self.llm:
-            result = self.llm.chat_llm(messages, **kwargs)
-        logger.debug("finished llm chat completion")
-
-        return result
+        #     {
+        #         "role": "system",
+        #         "content": self.system_prompt,
+        #     },
+        #     {
+        #         "role": "user",
+        #         "content": first_prompt,
+        #     },
+        # ]
+        # # TODO: append older question / answer pairs if any interface for chat exists
+        # with self.llm:
+        #     result = self.llm.chat_llm(messages, **kwargs)
+        # logger.debug("finished llm chat completion")
+        #
+        # return result
