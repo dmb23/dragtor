@@ -31,10 +31,16 @@ class LlamaServerHandler:
     Requires llama.cpp installed and the executables to be findable in a shell.
     """
 
+    # TODO: instead of the save_slot / load_slot API endpoints, focus on prompt cache:
+    #  `--prompt-cache FNAME` and `prompt-cache-ro`
+    # That means probably add
+    # - a `from_cache` argument to init
+    # - a `chat_to_cache(self, messages, filename)` method
+
     modelpath: Path
     _host: str = field(init=False)
     _port: str = field(init=False)
-    _state_dir: Path = field(init=False)
+    _checkpoint_dir: Path = field(init=False)
 
     def __post_init__(self):
         self._host = config.conf.select("model.host", default="127.0.0.1")
@@ -44,9 +50,13 @@ class LlamaServerHandler:
         self._port = port
         self.url = f"http://{self._host}:{self._port}"
         self.modelpath = Path(self.modelpath)
-        self._state_dir = Path(
-            config.conf.select("model.state_dir", default=f"{config.conf.base_path}/checkpoints")
+        self._checkpoint_dir = Path(
+            config.conf.select(
+                "model.checkpoint_dir", default=f"{config.conf.base_path}/checkpoints"
+            )
         )
+        if not self._checkpoint_dir.exists():
+            self._checkpoint_dir.mkdir(parents=True)
 
     def _build_server_command(self) -> str:
         """Build the shell command to start the llama.cpp server"""
@@ -59,8 +69,6 @@ class LlamaServerHandler:
             self._host,
             "--port",
             self._port,
-            "--slot-save-path",
-            self._state_dir,
         ]
 
         if len(kwargs):
@@ -121,40 +129,6 @@ class LlamaServerHandler:
         except requests.RequestException as e:
             logger.error(f"Error querying Llama server: {e}")
             return ""
-
-    def _save_state(self, statefile: Path, slot_id: int = 0):
-        """POST to  /slots/{slot_id}?action=save"""
-        url = f"{self.url}/slots/{slot_id}?action=save"
-        headers = {"Content-Type": "application/json"}
-        data = {
-            "filename": statefile.resolve(),
-        }
-
-        try:
-            response = requests.post(url, headers=headers, data=json.dumps(data))
-            response.raise_for_status()
-            if response.status_code != 200:
-                logger.error(f"Recieved response status {response.status_code}")
-            logger.info(response)
-        except requests.RequestException as e:
-            logger.error(f"Error querying Llama server: {e}")
-
-    def _load_state(self, statefile: Path, slot_id: int = 0):
-        """Load a saved state from the llama server"""
-        url = f"{self.url}/slots/{slot_id}?action=restore"
-        headers = {"Content-Type": "application/json"}
-        data = {
-            "filename": statefile.resolve(),
-        }
-
-        try:
-            response = requests.post(url, headers=headers, data=json.dumps(data))
-            response.raise_for_status()
-            if response.status_code != 200:
-                logger.error(f"Recieved response status {response.status_code}")
-            logger.info(response)
-        except requests.RequestException as e:
-            logger.error(f"Error querying Llama server: {e}")
 
     @classmethod
     def from_config(cls) -> Self:
