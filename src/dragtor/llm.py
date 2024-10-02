@@ -1,11 +1,12 @@
 from collections import deque
 from dataclasses import dataclass, field
+from enum import Enum
 import json
 from pathlib import Path
 import shlex
 import subprocess
 from time import sleep
-from typing import Optional, Self
+from typing import Self
 
 from loguru import logger
 import requests
@@ -42,11 +43,15 @@ class LlamaServerHandler:
     #   - according to that, adjust the handling of cache kwargs when a statefile is passed
 
     modelpath: Path
-    statefile: Optional[Path] = field(default=None)
     url: str = field(init=False)
     _checkpoint_dir: Path = field(init=False)
     _kwargs: dict = field(init=False)
     _temp_kwargs: dict = field(init=False, default_factory=dict)
+
+    class SlotAction(Enum):
+        SAVE = "save"
+        RESTORE = "restore"
+        ERASE = "erase"
 
     def __post_init__(self):
         self._host = config.conf.select("model.host", default="127.0.0.1")
@@ -67,6 +72,7 @@ class LlamaServerHandler:
                 "model": str(self.modelpath.resolve()),
                 "host": self._host,
                 "port": self._port,
+                "slot_save_path": str(self._checkpoint_dir.resolve()),
             }
         )
 
@@ -91,8 +97,6 @@ class LlamaServerHandler:
             else:
                 pieces.extend([f"--{k}", str(v)])
 
-        if self.statefile is not None:
-            pieces.extend(["--prompt-cache", str(self.statefile.resolve())
         return shlex.join(pieces)
 
     def __enter__(self):
@@ -150,13 +154,53 @@ class LlamaServerHandler:
             logger.error(f"Error querying Llama server: {e}")
             return ""
 
-    def store_state(self, messages: list[dict]):
-        if self.statefile is None:
-            logger.warning("Tried to store model cache to file, but no statefile specified!")
-            return None
+    def _manage_slot_state(self, action: SlotAction, filename: str = "", slot_id: int = 0):
+        if action == LlamaServerHandler.SlotAction.SAVE and filename == "":
+            logger.error("You need to provide a file to store a model state to.")
+            return
+        if action == LlamaServerHandler.SlotAction.RESTORE and filename == "":
+            logger.error("You need to provide a file to restore a model state from.")
+            return
+        if action == LlamaServerHandler.SlotAction.ERASE and filename != "":
+            logger.warning(
+                "You provided a file for model state, ignored for erasing the slot memory!"
+            )
 
+        url = f"{self.url}/slots/{slot_id}?action={action}"
+        kwargs = {}
+        kwargs["headers"] = {"Content-Type": "application/json"}
+        if action != LlamaServerHandler.SlotAction.ERASE:
+            kwargs["data"] = json.dumps(
+                {
+                    "filename": filename,
+                }
+            )
+
+        try:
+            response = requests.post(url, **kwargs)
+            response.raise_for_status()
+            if response.status_code != 200:
+                logger.error(
+                    f"Recieved response status {response.status_code} when managing slot state"
+                )
+        except requests.RequestException as e:
+            logger.error(f"Error querying Llama server: {e}")
+
+    def store_state(self, messages: list[dict], filename: str):
         with self:
-            self.chat_llm(messages)
+            self.chat_llm(messages, cache_prompt=True)
+            self._manage_slot_state(
+                LlamaServerHandler.SlotAction.SAVE, slot_id=0, filename=filename
+            )
+
+    def chat_from_state(self, messages: list[dict], filename: str) -> str:
+        with self:
+            self._manage_slot_state(
+                LlamaServerHandler.SlotAction.RESTORE, slot_id=0, filename=filename
+            )
+            response = self.chat_llm(messages)
+
+        return response
 
     @classmethod
     def from_config(cls) -> Self:
