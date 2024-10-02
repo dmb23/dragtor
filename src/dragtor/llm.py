@@ -5,7 +5,7 @@ from pathlib import Path
 import shlex
 import subprocess
 from time import sleep
-from typing import Self
+from typing import Optional, Self
 
 from loguru import logger
 import requests
@@ -34,13 +34,19 @@ class LlamaServerHandler:
     # TODO: instead of the save_slot / load_slot API endpoints, focus on prompt cache:
     #  `--prompt-cache FNAME` and `prompt-cache-ro`
     # That means probably add
-    # - a `from_cache` argument to init
-    # - a `chat_to_cache(self, messages, filename)` method
+    # - adjust the kwargs when a statefile is passed to include cache
+    # - a `chat_to_cache(self, messages)` method
+    # figure out:
+    # - does cache / ro-cache really help with long re-used prompts?
+    # - what happens when I pass in an empty ro-cache?
+    #   - according to that, adjust the handling of cache kwargs when a statefile is passed
 
     modelpath: Path
-    _host: str = field(init=False)
-    _port: str = field(init=False)
+    statefile: Optional[Path] = field(default=None)
+    url: str = field(init=False)
     _checkpoint_dir: Path = field(init=False)
+    _kwargs: dict = field(init=False)
+    _temp_kwargs: dict = field(init=False, default_factory=dict)
 
     def __post_init__(self):
         self._host = config.conf.select("model.host", default="127.0.0.1")
@@ -50,30 +56,43 @@ class LlamaServerHandler:
         self._port = port
         self.url = f"http://{self._host}:{self._port}"
         self.modelpath = Path(self.modelpath)
-        self._checkpoint_dir = Path(
-            config.conf.select(
-                "model.checkpoint_dir", default=f"{config.conf.base_path}/checkpoints"
-            )
-        )
+
+        self._checkpoint_dir = Path(config.conf.base_path) / "checkpoints"
         if not self._checkpoint_dir.exists():
             self._checkpoint_dir.mkdir(parents=True)
 
+        self._kwargs = config.conf.select("model.kwargs", default={})
+        self._kwargs.update(
+            {
+                "model": str(self.modelpath.resolve()),
+                "host": self._host,
+                "port": self._port,
+            }
+        )
+
+    def __call__(self, **kwargs):
+        self._temp_kwargs.update({k.replace("_", "-"): v for k, v in kwargs})
+        return self
+
     def _build_server_command(self) -> str:
         """Build the shell command to start the llama.cpp server"""
-        kwargs = config.conf.select("model.kwargs", default={})
+        self._kwargs.update(self._temp_kwargs)
+
         pieces = [
             "llama-server",
-            "-m",
-            str(self.modelpath.resolve()),
-            "--host",
-            self._host,
-            "--port",
-            self._port,
         ]
 
-        if len(kwargs):
-            for k, v in kwargs.items():
+        for k, v in self._kwargs.items():
+            if type(v) is bool:
+                if v:
+                    pieces.extend([f"--{k}"])
+                else:
+                    pieces.extend([f"--no-{k}"])
+            else:
                 pieces.extend([f"--{k}", str(v)])
+
+        if self.statefile is not None:
+            pieces.extend(["--prompt-cache", str(self.statefile.resolve())
         return shlex.join(pieces)
 
     def __enter__(self):
@@ -84,6 +103,7 @@ class LlamaServerHandler:
 
     def __exit__(self, exc_type, exc_value, traceback):
         self.p.terminate()
+        self._temp_kwargs.clear()
 
     def query_llm(self, prompt: str, **kwargs) -> str:
         """Send a query to the llama server.
@@ -129,6 +149,14 @@ class LlamaServerHandler:
         except requests.RequestException as e:
             logger.error(f"Error querying Llama server: {e}")
             return ""
+
+    def store_state(self, messages: list[dict]):
+        if self.statefile is None:
+            logger.warning("Tried to store model cache to file, but no statefile specified!")
+            return None
+
+        with self:
+            self.chat_llm(messages)
 
     @classmethod
     def from_config(cls) -> Self:
@@ -191,6 +219,8 @@ class LlamaCliHandler:
 @dataclass
 class LocalDragtor:
     """Manage user requests by including context information and feeding them to LLMs."""
+
+    # TODO: figure out an interface for managing cache files in the LlamaServerHandler
 
     llm: LlamaServerHandler = field(default_factory=LlamaServerHandler.from_config)
     user_prompt_template: str = config.conf.select("prompts.user_template")

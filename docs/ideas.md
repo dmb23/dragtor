@@ -20,6 +20,15 @@ It should be possible to save the model state to disk.
     - [ ] check if that does what I expect it to
 
 
+### Load Podcast data
+
+- [ ] create a new `DataLoader` to
+    - [ ] load files from podcast feeds
+    - [ ] parse them to text (e.g. whisper.cpp)
+        - [ ] check how difficult it is to do "entity recognition" - Who is speaking?
+    - [ ] store that information in plain text, ready for further processing
+
+
 ### small TODOs
 
 - ✅ ~implement a proper prompt for Llama3.1~
