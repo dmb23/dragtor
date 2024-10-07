@@ -36,7 +36,7 @@ reranker:
   n_ranked: 10
 index:
   # valid strategies: basic [default], late_chunking
-  strategy: late_chunking
+  strategy: basic
 model:
   # host: 127.0.0.1
   # port: 8080

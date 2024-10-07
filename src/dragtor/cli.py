@@ -1,5 +1,7 @@
 """Process Logic for dRAGtor application. Neatly packed as a CLI"""
 
+import hashlib
+
 import fire
 from loguru import logger
 from omegaconf import OmegaConf
@@ -47,6 +49,19 @@ class Cli:
         index = get_index()
         index.index_texts(full_texts)
         logger.info("Indexed all cached data successfully")
+
+    @logger.catch
+    def preload(self):
+        """Create pre-loaded state files for all loaded sources for retrieval"""
+        loader = data.JinaLoader()
+        full_texts = loader.get_cache()
+
+        ld = LocalDragtor()
+        for text in full_texts:
+            text_id = hashlib.md5(text.encode("utf-8")).hexdigest()
+            messages = ld._to_messages(question="", context=text)
+            filename = f"{text_id}.bin"
+            ld.llm.store_state(messages, filename)
 
     @logger.catch
     def search(self, question: str) -> str:

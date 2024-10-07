@@ -3,10 +3,8 @@
 ## Current Plan
 
 - ✅ figure out how to use [[#Model Checkpoints]] and decide how to continue for now:
-    - I'll call a basic `llama-cli` command to load the model from checkpoint and ask a question
-    - I don't need the overhead the server is currently creating
-- figure out how to decide on which context to load from the checkpoint
-    - write summaries into the vector store
+    - ✅I can continue to use the `llama-server` command and manage slot state
+    - ✅that means I can continue to use the easy interface via chat messages with better message ending
 - figure out how conversation mode works with the `llama-cli` command
 
 ## Open Issues
@@ -16,8 +14,17 @@
 It should be possible to save the model state to disk.
 
 - [x] `llama-cli` allows to save state after an initial prompt prefix. This could store "system prompt", context, and possible few-shot prompts
-- [ ] `llama-server` allows to save state somehow
-    - [ ] check if that does what I expect it to
+    - I still do not understand how to properly delimit messages via `llama-cli`
+- [x] `llama-server` allows to save state somehow
+    - [x] ~check if that does what I expect it to~ That does what it is supposed to!
+- 💡figure out how to decide on which context to load from the checkpoint
+    - write a new cli command `preload` that
+        - takes all cached documents from an index
+        - creates state files for system prompt + basic context stuff + document
+        - write summaries into the vector store
+        - write summaries of all different topics into the vector store
+    - add a method `chat_from_file` to a `LlamaHandler`
+    - add a flag to `answer` that allows to either answer from RAG or from single file
 
 
 ### Load Podcast data
