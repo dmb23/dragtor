@@ -1,6 +1,7 @@
 from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum
+import hashlib
 import json
 from pathlib import Path
 import shlex
@@ -31,16 +32,6 @@ class LlamaServerHandler:
 
     Requires llama.cpp installed and the executables to be findable in a shell.
     """
-
-    # TODO: instead of the save_slot / load_slot API endpoints, focus on prompt cache:
-    #  `--prompt-cache FNAME` and `prompt-cache-ro`
-    # That means probably add
-    # - adjust the kwargs when a statefile is passed to include cache
-    # - a `chat_to_cache(self, messages)` method
-    # figure out:
-    # - does cache / ro-cache really help with long re-used prompts?
-    # - what happens when I pass in an empty ro-cache?
-    #   - according to that, adjust the handling of cache kwargs when a statefile is passed
 
     modelpath: Path
     url: str = field(init=False)
@@ -177,6 +168,8 @@ class LlamaServerHandler:
             )
 
         try:
+            logger.debug(f"{url=}")
+            logger.debug(f"{kwargs=}")
             response = requests.post(url, **kwargs)
             response.raise_for_status()
             if response.status_code != 200:
@@ -187,6 +180,10 @@ class LlamaServerHandler:
             logger.error(f"Error querying Llama server: {e}")
 
     def store_state(self, messages: list[dict], filename: str):
+        statefile = Path(self._checkpoint_dir) / filename
+        statefile.parent.mkdir(parents=True, exist_ok=True)
+        statefile.unlink(missing_ok=True)
+        statefile.touch()
         with self:
             self.chat_llm(messages, cache_prompt=True)
             self._manage_slot_state(
@@ -198,7 +195,7 @@ class LlamaServerHandler:
             self._manage_slot_state(
                 LlamaServerHandler.SlotAction.RESTORE, slot_id=0, filename=filename
             )
-            response = self.chat_llm(messages)
+            response = self.chat_llm(messages, cache_prompt=True)
 
         return response
 
@@ -263,15 +260,22 @@ class LocalDragtor:
         ]
         return messages
 
-    def chat(self, question: str, **kwargs) -> str:
+    def chat(self, question: str, contextfile: str = "", **kwargs) -> str:
         """Generate an answer to the question via the chat interface.
 
         Use available knowledge via RAG approach.
         """
-        context = self._get_context(question)
-        messages = self._to_messages(question, context)
-        with self.llm:
-            result = self.llm.chat_llm(messages, **kwargs)
+        if contextfile == "":
+            context = self._get_context(question)
+            messages = self._to_messages(question, context)
+            with self.llm:
+                result = self.llm.chat_llm(messages, **kwargs)
+        else:
+            context = Path(contextfile).resolve().read_text()
+            context_id = hashlib.md5(context.encode("utf-8")).hexdigest()
+            statefile = f"{context_id}.bin"
+            messages = self._to_messages(question, context)
+            result = self.llm.chat_from_state(messages, statefile, **kwargs)
         logger.debug("finished llm chat completion")
 
         return result

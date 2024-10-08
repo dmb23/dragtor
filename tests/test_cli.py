@@ -1,7 +1,8 @@
 """mostly to check that the commands run, and to allow to debug inside"""
 
-from dragtor.cli import Cli
 import pytest
+
+from dragtor.cli import Cli
 
 
 @pytest.fixture
@@ -25,6 +26,12 @@ def test_cli_search(question: str, full_store):
     found_texts = Cli().search(question)
 
     assert len(found_texts) > 0
+
+
+def test_cli_preload(full_store, caplog):
+    Cli().preload()
+
+    assert "Preloaded 1/" in caplog.text
 
 
 def test_cli_ask(question: str, full_store):
