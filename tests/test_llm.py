@@ -1,3 +1,5 @@
+import re
+
 import pytest
 
 from dragtor import llm
@@ -25,6 +27,34 @@ def test_gen_query_eos(llama_server_handler):
     assert type(res) is str
     assert len(res) == 6
     assert res == " life?"
+
+
+def test_store_management(capfd, tmp_path):
+    lsh = llm.LlamaServerHandler.from_config()
+    lsh._checkpoint_dir = tmp_path
+    cache_file = tmp_path / "test.bin"
+    messages = [
+        {"role": "system", "content": "You complete the last words of questions"},
+        {"role": "user", "content": "What is the meaning of"},
+    ]
+
+    with lsh:
+        lsh.chat_llm(messages, temperature=0)
+    captured = capfd.readouterr()
+    pattern = re.compile(r"prompt eval time[^\n]* (\d+) tokens")
+    match = pattern.search(captured.out)
+    assert match
+    assert match.group(1) == "26"
+
+    with capfd.disabled():
+        lsh.store_state(messages, cache_file.name)
+
+    lsh.chat_from_state(messages, cache_file.name)
+
+    captured2 = capfd.readouterr()
+    match2 = pattern.search(captured2.out)
+    assert match2
+    assert match2.group(1) == "1"
 
 
 def test_dragtor_answer():

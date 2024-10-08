@@ -4,6 +4,7 @@ __pycache__
 data/*
 models/*
 tests/assets/chroma_db/*
+tests/assets/checkpoints/*
 config/credentials*
 .env
 .vscode/
