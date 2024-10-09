@@ -33,11 +33,12 @@ class Messages:
         return messages
 
 
-do_first_step = False
+do_first_step = True
 if do_first_step:
     sys_prompt1 = """You recieve a document and your task is to find the 2-6 most important topics which are discussed in it.
     The document will be contained in <Document> and </Document>.
-    For each of the identified topics that are covered in the document you name the topic and write one sentence in which you give a concise description of the topic.
+    For each of the identified topics that are covered in the document you name the topic and write a description of the topic.
+    The description should contain one sentence summarizing what the topic is about and three concise sentences summarizing the key insights from the document.
 
     Use the following JSON format for your output:
     {
@@ -66,7 +67,7 @@ if do_first_step:
 
     # start server externally to make experimentation faster
     # with lsh:
-    answer1 = lsh.chat_llm(messages.format(), cache_prompt=True)
+    answer1 = lsh.chat_llm(messages.format(), cache_prompt=True, n_predict=2048)
     logger.info(f"---\nAnswer:\n{answer1}")
 
 else:
@@ -101,7 +102,7 @@ def clean_answer(answer: str) -> str:
     return answer
 
 
-do_second_step = False
+do_second_step = True
 if do_second_step:
     answer1 = clean_answer(answer1)
     logger.info(f"---\nStripped Answer:\n{answer1}")
@@ -123,7 +124,7 @@ if do_second_step:
         logger.error(e)
         correcting_messages = Messages()
         correcting_messages.user(json_prompt.format(e=e, failing_json=answer1))
-        corrected_answer = lsh.chat_llm(correcting_messages.format())
+        corrected_answer = lsh.chat_llm(correcting_messages.format(), n_predict=2048)
         try:
             topics = json.loads(answer1)
         except json.JSONDecodeError:
@@ -144,10 +145,11 @@ for topic_block in topics:
 
 topic_block = topics[3]
 
-sys_prompt2 = """You recieve a document and a topic which is discussed in the document and a description of that topic.
-Your task is to formulate 5 questions that can be asked on that topic that can be answered by the information provided in the document.
-The answer to each question should be fully contained in the document, and not rely on external knowledge.
-The document will be enclosed in <Document> and </Document>, the topic will be enclosed in <Topic> and </Topic>, the description of the topic will be enclosed in <TopicDescription> and </TopicDescription>.
+sys_prompt2 = """You are an expert on climbing related health and training topics.
+You recieve a topic which is discussed in an unknown document and a description of that topic.
+Your task is to formulate 5 questions that climbers could ask on that topic.
+The questions should search to expand points mentioned in the description of the topics.
+The topic will be enclosed in <Topic> and </Topic> and the description of the topic will be enclosed in <TopicDescription> and </TopicDescription>.
 
 Use the following JSON format for your output:
 {
@@ -160,10 +162,6 @@ Write only the JSON output in your answer!
 
 
 user_prompt2 = """
-<Document>
-{text}
-</Document>
-
 <Topic>
 {topic}
 </Topic>
@@ -191,3 +189,5 @@ messages.user(
 answer2 = lsh.chat_llm(messages.format(), cache_prompt=True)
 logger.info(f"Creating questions for topic {topic_block['topic']}:")
 logger.info(f"---\nQuestions:\n{answer2}")
+
+# TODO: send the questions and the original text to Llama70B at grok for answers?
