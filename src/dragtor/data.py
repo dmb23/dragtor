@@ -68,7 +68,7 @@ class JinaLoader:
         """Get all previously cached text that was loaded to file"""
         full_texts = []
         for fpath in self.outdir.glob("*.md"):
-            logger.warning(fpath)
+            logger.info(f"loading cached file {fpath}")
             full_texts.append(fpath.read_text(encoding="utf8"))
 
         return full_texts
