@@ -140,6 +140,8 @@ class LlamaServerHandler:
             if response.status_code != 200:
                 logger.error(f"Recieved response status {response.status_code}")
             result = response.json()
+            # TODO: this should only log the stop reason!
+            logger.debug(result)
             return result["choices"][0]["message"]["content"]
         except requests.RequestException as e:
             logger.error(f"Error querying Llama server: {e}")
