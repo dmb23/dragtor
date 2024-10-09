@@ -279,3 +279,22 @@ class LocalDragtor:
         logger.debug("finished llm chat completion")
 
         return result
+
+
+# @dataclass
+# class FeatureGenerator:
+#     llm: LlamaServerHandler = field(default_factory=LlamaServerHandler.from_config)
+#     index: Index = field(default_factory=get_index)
+#
+#     summary_prompt_template: str = """You are an """
+#     def generate_topics(self):
+#         loader = data.JinaLoader()
+#         full_texts = loader.get_cache()
+#
+#         for text in full_texts:
+#             text_id = hashlib.md5(text.encode("utf-8")).hexdigest()
+#
+#             prompt = summary_prompt_template.format(text)
+#
+#             answer = self.llm.query_llm(prompt)
+#             answer_js = json.loads(answer)
