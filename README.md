@@ -14,8 +14,9 @@ Again, mostly meant for experimentation. But allows to use via a CLI when instal
 
 - have a python environment with Python >=3.11 and `poetry` for package management. A lock file is part of the repo.
 - make sure `llama-cpp-python` runs with some sort of GPU / MPS support on your machine (or bring probably a lot of patience?)
-- download a model and put it under /dragtor/models folder
+- download the models and put it under /dragtor/models folder
     - I use [a quantized Llama3.1 8B Instruct](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)
+    - For diarize (feature not yet active), use [base EN model](https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-base.en.bin)
 - `poetry run dragtor` to start via the CLI
 
 ## Current Overview
