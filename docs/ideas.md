@@ -5,7 +5,28 @@
 - ✅ figure out how to use [[#Model Checkpoints]] and decide how to continue for now:
     - ✅I can continue to use the `llama-server` command and manage slot state
     - ✅that means I can continue to use the easy interface via chat messages with better message ending
-- figure out how conversation mode works with the `llama-cli` command
+- ~figure out how conversation mode works with the `llama-cli` command~
+
+- 💡 Allow for evaluation of RAG answers
+    - ✅ faithfulness: 
+        - extract propositions from an answer.
+        - for each proposition:
+            - check if proposition can be attributed to source context
+    - 󰹏 AnswerCorrectness
+        - extract propositions from an answer.
+            - check how the proposition relates to a reference answer:
+                - TP: proposition is present in reference
+                - FP: proposition is not present in reference
+                - FN: proposition from reference is not present in answer
+
+- Finish Implementation
+    - evaluate performance
+        - make it end-to-end usable
+        - create defined testcases
+        - create evaluation summaries
+    - create features
+        - store features in VectorStore
+    - late chunking
 
 ## Open Issues
 

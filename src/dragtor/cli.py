@@ -80,6 +80,24 @@ class Cli:
         """Get an answer to your question based on the content of a file from the index cache"""
         return LocalDragtor().chat(question, statefile)
 
+    @logger.catch
+    def transform(self):
+        """Create additional features from available sources.
+
+        - extract topics per source
+        - create summaries per topic
+        - create question / answer pairs for each topic
+        """
+        raise NotImplementedError
+
+    def eval(self):
+        """Evaluate the performance of the configured RAG setup.
+
+        - evaluate how many of the propositions in a given answer are based on the sources.
+        - possibly: evaluate answers to reference questions against gold truths
+        """
+        raise NotImplementedError
+
 
 def entrypoint():
     """Ask the dRAGtor your questions about climbing injuries!"""
