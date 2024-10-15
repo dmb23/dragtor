@@ -16,11 +16,6 @@ Again, mostly meant for experimentation. But allows to use via a CLI when instal
 - make sure `llama-cpp-python` runs with some sort of GPU / MPS support on your machine (or bring probably a lot of patience?)
 - download a model and put it under /dragtor/models folder
     - I use [a quantized Llama3.1 8B Instruct](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)
-- to install locally, go to dragtor folder then run:
-  - `python -m build`
-  - `pip install -e [local_directory]` (e.g. /Users/[username]/dragtor/)
-  - `python run_setup.py`
-  To make sure all dependencies are fulfilled
 - `poetry run dragtor` to start via the CLI
 
 ## Current Overview
