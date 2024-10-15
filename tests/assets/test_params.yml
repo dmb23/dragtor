@@ -1,8 +1,10 @@
-base_path: "/Users/mischa/Projects/local/dragtor/tests/assets"
+base_path: "/Users/isyana/dev2/dragtor/tests/assets"
 data:
   jina_cache: "jina_reader/"
   hoopers_urls:
     - "test_blog"
+  audio_cache: "audio_transcript/"
+  diarize_cache: "diarize_transcript/"
 embeddings:
   strategy: default
 store:
@@ -20,7 +22,7 @@ reranker:
 model:
   # host: 127.0.0.1
   # port: 8080
-  file_path: "/Users/mischa/Projects/local/dragtor/models/smollm-135m-instruct-add-basics-q8_0.gguf"
+  file_path: "/Users/isyana/dev2/dragtor/models/smollm-135m-instruct-add-basics-q8_0.gguf"
   max_completion_tokens: 64
   kwargs:
     --gpu-layers: -1

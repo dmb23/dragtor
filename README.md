@@ -12,10 +12,15 @@ All model interactions are meant to run locally, developed for an Mac M1.
 ## Getting Started
 Again, mostly meant for experimentation. But allows to use via a CLI when installed via [Poetry](https://python-poetry.org/)
 
-- have a python environment with Pyton 3.11 and `poetry` for package management. A lock file is part of the repo.
+- have a python environment with Python 3.11 and `poetry` for package management. A lock file is part of the repo.
 - make sure `llama-cpp-python` runs with some sort of GPU / MPS support on your machine (or bring probably a lot of patience?)
 - download a model
     - I use [a quantized Llama3.1 8B Instruct](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)
+- to install locally, go to dragtor folder then run:
+  - `python -m build`
+  - `pip install -e [local_directory]` (e.g. /Users/[username]/dragtor/)
+  - `python run_setup.py`
+  To make sure all dependencies are fulfilled
 - `poetry run dragtor` to start via the CLI
 
 ## Current Overview

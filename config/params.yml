@@ -1,4 +1,4 @@
-base_path: "/Users/mischa/Projects/local/dragtor/data/"
+base_path: "/Users/isyana/dev2/dragtor/data/"
 # allows to use loguru for external loggers
 expose_library_logs: False
 data:
@@ -9,9 +9,14 @@ data:
     # - "https://www.hoopersbeta.com/library/how-to-heal-from-a-lumbrical-injury-5-simple-stages-to-recover"
     # - "https://www.hoopersbeta.com/library/flexor-tenosynovitis"
     # - "https://www.hoopersbeta.com/library/will-hangboarding-2x/day-improve-your-climbing-ultimate-revised-breakdown"
+  audio_cache: "audio_transcript/"
+  audio_urls:
+    # - "https://cdn-media.huggingface.co/speech_samples/sample2.flac"
+    - "https://cdn.simplecast.com/audio/8d0e41cc-be61-4d71-ab0d-b985db72bb92/episodes/42685a36-6381-4017-ad34-48fe1822e83e/audio/2c2a3b1c-7b39-4852-a947-6f7ea10dbf98/default_tc.mp3"
+  diarize_cache: "diarize_transcript/"
 chunking:
   # valid strategies: paragraph [default], jina_tokenizer
-  strategy: default
+  strategy: jina_tokenizer
   jina_tokenizer:
     max_chunk_length: 1000
 embeddings:
@@ -40,7 +45,7 @@ index:
 model:
   # host: 127.0.0.1
   # port: 8080
-  file_path: "/Users/mischa/Projects/local/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+  file_path: "/Users/isyana/dev2/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
   max_completion_tokens: 512
   kwargs:
     --gpu-layers: 15
@@ -59,3 +64,9 @@ prompts:
     {question}
 
     answer:
+audio:
+  exe: "/Users/isyana/dev2/dragtor/transcribe"
+  model: "/Users/isyana/dev2/dragtor/models/ggml-base.en.bin"
+  files: "/Users/isyana/dev2/dragtor/data/audio_files/"
+creds:
+  jina: "jina_106648960c5647c289ca2a0b387b3726KQVdm7hIM3z0iAnAjQbBOOR9m0Z0"

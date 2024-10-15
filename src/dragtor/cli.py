@@ -4,7 +4,7 @@ import fire
 from loguru import logger
 from omegaconf import OmegaConf
 
-from dragtor import config, data
+from dragtor import config, data, audio_loader
 from dragtor.index.index import get_index
 from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor
@@ -27,7 +27,13 @@ class Cli:
         urls = config.conf.data.hoopers_urls
         logger.debug(f"loading the urls:\n{urls}")
         data.JinaLoader().load_jina_to_cache(urls)
-        logger.info("Loaded data successfully")
+        logger.info("Loaded blog data successfully")
+
+        audio_urls = config.conf.data.audio_urls
+        logger.debug(f"loading audio urls:\n{audio_urls}")
+        for audio_url in audio_urls:
+            audio_loader.AudioLoader().transcribe(audio_url, diarize=False)
+        logger.info("Loaded audio data successfully")
 
     def clear_index(self):
         """Reset all data already in the index"""
@@ -42,7 +48,8 @@ class Cli:
     def index(self):
         """Create a Vector Store of embeddings of all loaded sources for retrieval"""
         loader = data.JinaLoader()
-        full_texts = loader.get_cache()
+        audio = audio_loader.AudioLoader()
+        full_texts = loader.get_cache() + audio.get_audio_cache()
 
         index = get_index()
         index.index_texts(full_texts)
