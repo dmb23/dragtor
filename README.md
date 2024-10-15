@@ -12,9 +12,9 @@ All model interactions are meant to run locally, developed for an Mac M1.
 ## Getting Started
 Again, mostly meant for experimentation. But allows to use via a CLI when installed via [Poetry](https://python-poetry.org/)
 
-- have a python environment with Python 3.11 and `poetry` for package management. A lock file is part of the repo.
+- have a python environment with Python >=3.11 and `poetry` for package management. A lock file is part of the repo.
 - make sure `llama-cpp-python` runs with some sort of GPU / MPS support on your machine (or bring probably a lot of patience?)
-- download a model
+- download a model and put it under /dragtor/models folder
     - I use [a quantized Llama3.1 8B Instruct](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)
 - to install locally, go to dragtor folder then run:
   - `python -m build`
@@ -30,6 +30,9 @@ I provide a small CLI to interact with the main functionality, most steps can be
 - Load data
     - load blog pages from [Hooper's Beta](www.hoopersbeta.com)
         - use Jina Reader API to easily parse the content
+    - load audio data from [Nugget Climbing Podcast](https://thenuggetclimbing.com/episodes)
+        - use whisper.cpp to transcribe, and 
+        - pyannote.audio to diarize the conversation (differentiate the speakers). But this feature still not used 
 - split data
 - create vector embeddings
 - store embeddings in a Vector Store
