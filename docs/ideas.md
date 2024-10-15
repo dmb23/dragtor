@@ -20,6 +20,8 @@
                 - FN: proposition from reference is not present in answer
 
 - Finish Implementation
+    - AnswerCorrectness
+    - check: can I rewrite the `LlamaServerHandler` so that it detects if a server is up and wraps any call only if required? Maybe as a decorator, maybe in the relevant functions?
     - evaluate performance
         - make it end-to-end usable
         - create defined testcases
