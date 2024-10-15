@@ -11,6 +11,27 @@ lsh = llm.LlamaServerHandler.from_config()
 logger.info(f"---\nModel:\n{lsh.modelpath}")
 
 
+root_dir = Path("/Users/mischa/Projects/local/dragtor/")
+json_grammar_file = root_dir / "scripts" / "json.gnbf"
+json_arr_grammar_file = root_dir / "scripts" / "json_arr.gnbf"
+
+stored_topics = {}
+topics_file = root_dir / "data" / "features" / "topics.json"
+stored_questions = {}
+questions_file = root_dir / "data" / "features" / "questions.json"
+stored_answers = {}
+answers_file = root_dir / "data" / "features" / "answers.json"
+failed_parse_file = root_dir / "data" / "features" / "failed_parse.txt"
+for file in (
+    topics_file,
+    questions_file,
+    answers_file,
+    failed_parse_file,
+):
+    file.parent.mkdir(exist_ok=True, parents=True)
+    file.touch()
+
+
 @dataclass
 class Messages:
     _parts: list = field(default_factory=list)
@@ -59,29 +80,18 @@ def parse_llm_json(llm_answer: str) -> list[dict]:
         correcting_messages.user(json_prompt.format(e=e, failing_json=llm_answer))
         corrected_answer = lsh.chat_llm(correcting_messages.format(), n_predict=2048)
         try:
-            parsed = json.loads(clean_answer(llm_answer))
+            parsed = json.loads(clean_answer(corrected_answer))
         except json.JSONDecodeError:
             logger.error("Failing to parse corrected JSON output")
             logger.error(e)
             logger.error(corrected_answer)
+            with failed_parse_file.open("a") as f:
+                f.write("\n---\n")
+                f.write(corrected_answer)
+                f.write("\n---\n")
             parsed = json.loads("[{}]")
 
     return parsed
-
-
-stored_topics = {}
-topics_file = Path("./data/features/topics.json")
-stored_questions = {}
-questions_file = Path("./data/features/questions.json")
-stored_answers = {}
-answers_file = Path("./data/features/answers.json")
-for file in (
-    topics_file,
-    questions_file,
-    answers_file,
-):
-    file.parent.mkdir(exist_ok=True, parents=True)
-    file.touch()
 
 
 def extract_topics(text: str) -> list[dict]:
@@ -91,10 +101,13 @@ def extract_topics(text: str) -> list[dict]:
     The description should contain one sentence summarizing what the topic is about and three concise sentences summarizing the key insights from the document.
 
     Use the following JSON format for your output:
+    [
     {
       "topic": "<text>",
       "description": "<text>",
     },
+    ...
+    ]
 
     Write only the JSON output in your answer!
     """
@@ -115,7 +128,12 @@ def extract_topics(text: str) -> list[dict]:
 
     # start server externally to make experimentation faster
     # with lsh:
-    llm_answer = lsh.chat_llm(messages.format(), cache_prompt=True, n_predict=2048)
+    llm_answer = lsh.chat_llm(
+        messages.format(),
+        cache_prompt=True,
+        n_predict=2048,
+        grammar_file=str(json_arr_grammar_file.resolve()),
+    )
 
     topics = parse_llm_json(llm_answer)
 
@@ -136,10 +154,13 @@ def create_questions_from_topic(topic_block: dict) -> list[dict]:
     The topic will be enclosed in <Topic> and </Topic> and the description of the topic will be enclosed in <TopicDescription> and </TopicDescription>.
 
     Use the following JSON format for your output:
+    [
     {
         "question_id": "<#>",
         "question": "<text>",
     },
+    ...
+    ]
 
     Write only the JSON output in your answer!
     """
@@ -167,7 +188,9 @@ def create_questions_from_topic(topic_block: dict) -> list[dict]:
 
     # start server externally to make experimentation faster
     # with lsh:
-    answer2 = lsh.chat_llm(messages.format(), cache_prompt=True)
+    answer2 = lsh.chat_llm(
+        messages.format(), cache_prompt=True, grammar_file=str(json_arr_grammar_file.resolve())
+    )
     logger.info(f"Creating questions for topic {topic_block['topic']}:")
 
     questions = parse_llm_json(answer2)
@@ -208,6 +231,7 @@ def answer_question_from_text(question: str, answer: str) -> str:
 
 
 if __name__ == "__main__":
+    do_short_test = True
     do_generate_topics = True
     do_generate_questions = True
     do_generate_answers = True
@@ -217,7 +241,9 @@ if __name__ == "__main__":
     logger.info(f"{len(full_texts)} cached texts available")
 
     # for testing:
-    full_texts = full_texts[:1]
+    if do_short_test:
+        full_texts = full_texts[:1]
+        logger.info("using only a single text for testing")
 
     if do_generate_topics:
         for text in full_texts:
@@ -262,3 +288,5 @@ if __name__ == "__main__":
 
                     stored_answers[text_id][topic_id][q_text] = answer
                     answers_file.write_text(json.dumps(stored_answers))
+
+# TODO: check how to enforce structured output
