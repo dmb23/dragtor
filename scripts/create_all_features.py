@@ -1,9 +1,11 @@
-from dataclasses import dataclass, field
+from dataclasses import field
 import hashlib
 import json
 from pathlib import Path
 
 from loguru import logger
+from pydantic import TypeAdapter
+from pydantic.dataclasses import dataclass
 
 from dragtor import data, llm
 
@@ -58,8 +60,8 @@ def clean_answer(answer: str) -> str:
     return answer
 
 
-def parse_llm_json(llm_answer: str) -> list[dict]:
-    llm_answer = clean_answer(llm_answer)
+def parse_llm_json(llm_answer: str) -> dict | list[dict]:
+    # llm_answer = clean_answer(llm_answer)
 
     json_prompt = """
     To ensure proper JSON schema formatting for input to a large language model, follow these rules:
@@ -80,7 +82,9 @@ def parse_llm_json(llm_answer: str) -> list[dict]:
         correcting_messages.user(json_prompt.format(e=e, failing_json=llm_answer))
         corrected_answer = lsh.chat_llm(correcting_messages.format(), n_predict=2048)
         try:
-            parsed = json.loads(clean_answer(corrected_answer))
+            # parsed = json.loads(clean_answer(corrected_answer))
+            # this is probably wrong, but I adjusted the JSON format of the answers for json_schema
+            parsed = json.loads(corrected_answer)
         except json.JSONDecodeError:
             logger.error("Failing to parse corrected JSON output")
             logger.error(e)
@@ -101,13 +105,14 @@ def extract_topics(text: str) -> list[dict]:
     The description should contain one sentence summarizing what the topic is about and three concise sentences summarizing the key insights from the document.
 
     Use the following JSON format for your output:
-    [
+    { "topics": [
     {
       "topic": "<text>",
       "description": "<text>",
     },
     ...
     ]
+    }
 
     Write only the JSON output in your answer!
     """
@@ -122,6 +127,15 @@ def extract_topics(text: str) -> list[dict]:
 
     """
 
+    @dataclass
+    class Topic:
+        topic: str
+        description: str
+
+    @dataclass
+    class Topics:
+        topics: list[Topic]
+
     messages = Messages()
     messages.system(sys_prompt1)
     messages.user(user_prompt1.format(text=text))
@@ -132,18 +146,19 @@ def extract_topics(text: str) -> list[dict]:
         messages.format(),
         cache_prompt=True,
         n_predict=2048,
-        grammar_file=str(json_arr_grammar_file.resolve()),
+        # grammar_file=str(json_arr_grammar_file.resolve()),
+        json_schema=TypeAdapter(Topics).json_schema(),
     )
 
     topics = parse_llm_json(llm_answer)
 
     logger.info(f"---\nParsed Topics:\n{topics}")
 
-    for topic_block in topics:
+    for topic_block in topics["topics"]:
         assert "topic" in topic_block
         assert "description" in topic_block
 
-    return topics
+    return topics["topics"]
 
 
 def create_questions_from_topic(topic_block: dict) -> list[dict]:
@@ -178,6 +193,15 @@ def create_questions_from_topic(topic_block: dict) -> list[dict]:
 
     """
 
+    @dataclass
+    class Question:
+        question_id: int
+        question: str
+
+    @dataclass
+    class Questions:
+        questions: list[Question]
+
     messages = Messages()
     messages.system(sys_prompt2)
     messages.user(
@@ -189,15 +213,15 @@ def create_questions_from_topic(topic_block: dict) -> list[dict]:
     # start server externally to make experimentation faster
     # with lsh:
     answer2 = lsh.chat_llm(
-        messages.format(), cache_prompt=True, grammar_file=str(json_arr_grammar_file.resolve())
+        messages.format(), cache_prompt=True, json_schema=TypeAdapter(Questions).json_schema()
     )
-    logger.info(f"Creating questions for topic {topic_block['topic']}:")
+    logger.info(f"creating questions for topic {topic_block['topic']}:")
 
     questions = parse_llm_json(answer2)
 
-    logger.info(f"---\nQuestions:\n{questions}")
+    logger.info(f"---\nQuestions:\n{questions['questions']}")
 
-    return questions
+    return questions["questions"]
 
 
 def answer_question_from_text(question: str, answer: str) -> str:
@@ -232,9 +256,9 @@ def answer_question_from_text(question: str, answer: str) -> str:
 
 if __name__ == "__main__":
     do_short_test = True
-    do_generate_topics = True
+    do_generate_topics = False
     do_generate_questions = True
-    do_generate_answers = True
+    do_generate_answers = False
 
     dl = data.JinaLoader()
     full_texts = dl.get_cache()
