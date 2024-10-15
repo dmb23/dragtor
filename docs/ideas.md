@@ -20,13 +20,21 @@
                 - FN: proposition from reference is not present in answer
 
 - Finish Implementation
+    - AnswerCorrectness
+    - check: can I rewrite the `LlamaServerHandler` so that it detects if a server is up and wraps any call only if required? Maybe as a decorator, maybe in the relevant functions?
     - evaluate performance
         - make it end-to-end usable
         - create defined testcases
         - create evaluation summaries
+        - revisit reference answers using the full text as context ( ~ 9750 tokens )
+            - use Llama3.1-70B from Grok and tune the prompt for faithfulness?
     - create features
-        - store features in VectorStore
+        - store features from script in VectorStore
     - late chunking
+
+- improve chunking
+    - late chunking in combination with semantic chunking sounds interesting
+    - look into agentic chunking!
 
 ## Open Issues
 
@@ -62,7 +70,6 @@ It should be possible to save the model state to disk.
 - ✅ ~implement a proper prompt for Llama3.1~
 - ✅ ~implement the correct distance function for retrieval~
 - ✅ ~create good questions to be answered with the available information.~
-    - build reference answers using the full text as context ( ~ 9750 tokens )
 
 ### Bugs
 
