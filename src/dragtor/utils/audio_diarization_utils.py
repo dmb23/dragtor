@@ -19,7 +19,7 @@ def audio_diarize(audio_path: str, diarize_model: str = "pyannote/speaker-diariz
     # Load pre-trained model
     pipeline = Pipeline.from_pretrained(
         diarize_model,
-        use_auth_token="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",  # TODO: move this
+        use_auth_token="",  # TODO: move this
     )
     pipeline.to(torch.device(device))
 
