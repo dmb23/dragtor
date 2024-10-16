@@ -181,6 +181,9 @@ def get_faithfullness(props: Propositions, context: str) -> EvalFaithful:
 
 
 if __name__ == "__main__":
+    do_get_propositions = True
+    do_get_faithfulness = False
+
     dl = data.JinaLoader()
     full_texts = dl.get_cache()
     logger.info(f"{len(full_texts)} cached texts available")
@@ -192,30 +195,12 @@ if __name__ == "__main__":
     topic, questions = next(iter(topic_answers.items()))
     question, answer = next(iter(questions.items()))
 
-    if False:
+    if do_get_propositions:
         props = get_propositions(answer)
     else:
         props = Propositions(
             propositions=[
                 "According to the document, weight training can help rock climbers improve their strength.",
-                "Weight training can help climbers learn how to control tension.",
-                "Weight training can help climbers build body awareness.",
-                "Weight training can help climbers improve their ability to pull harder.",
-                "Weight training can help climbers improve their strength without adding weight.",
-                "The document provides an example of the deadlift exercise.",
-                "The deadlift exercise is a good example of body awareness and tension control.",
-                "The deadlift forces the climber to engage their scapular retractors.",
-                "The deadlift forces the climber to engage their core.",
-                "The deadlift forces the climber to engage their glutes.",
-                "The deadlift forces the climber to engage their hamstrings.",
-                "Strength training can help improve the force capacity of muscles.",
-                "Strength training can help improve the force capacity of the shoulders.",
-                "Strength training can help the muscles sustain higher levels of force before failing.",
-                "Weight training can help climbers improve their strength in specific muscle groups.",
-                "The document suggests that weight training can be a valuable tool for rock climbers looking to improve their strength.",
-                "Weight training can help climbers improve their ability to pull harder.",
-                "Weight training can help climbers build body awareness.",
-                "Weight training can help climbers control tension.",
                 "Incorporating weight training into their training program can help climbers improve their climbing performance.",
             ]
         )
@@ -224,6 +209,26 @@ if __name__ == "__main__":
 
     context = contexts[text_key]
 
-    eval_faithful = get_faithfullness(props, context)
+    if do_get_faithfulness:
+        eval_faithful = get_faithfullness(props, context)
+    else:
+        eval_faithful = EvalFaithful(
+            evals=[
+                Faithfulness(
+                    statement="According to the document, weight training can help rock climbers improve their strength.",
+                    reasoning="The document explicitly states that weight training can help rock climbers improve their strength, citing examples of specific exercises such as the deadlift that can help build strength without adding weight.",
+                    is_inferred=True,
+                ),
+                Faithfulness(
+                    statement="Incorporating weight training into their training program can help climbers improve their climbing performance.",
+                    reasoning="The document suggests that incorporating weight training into their training program can help climbers improve their climbing performance, highlighting the potential benefits of weight training for climbers.",
+                    is_inferred=True,
+                ),
+            ]
+        )
 
     logger.info(eval_faithful)
+
+    model_answer = "The A2 pulley strain in the index finger is a common injury among climbers, but fortunately, it's often minor and can be treated effectively with conservative measures. Here's a step-by-step guide to help you recover:\n\n**Understanding the injury:**\nThe A2 pulley is a small, fibrous structure in the flexor tendon of the index finger, located near the base of the finger. It helps to stabilize the tendon and facilitate smooth movement of the finger. A strain or partial tear can occur due to repetitive stress, overuse, or a sudden jerk while climbing.\n\n**Conservative treatment:**\n\n1.  **Rest**: Give your finger a break and avoid climbing, heavy lifting, or activities that aggravate the pain. This allows the pulley to heal and reduces further irritation.\n2.  **Ice**: Apply ice to the affected area for 10-15 minutes, 2-3 times a day, to reduce inflammation and ease pain.\n3.  **Compression**: Use a compression bandage or wrap to provide support and stability to the finger.\n4.  **Elevation**: Elevate your hand above heart level to reduce swelling and promote blood flow.\n5.  **Pain management**: Over-the-counter pain relievers like acetaminophen or ibuprofen can help alleviate pain and reduce inflammation.\n\n**Stretching and strengthening exercises:**\n\n1.  **Finger bends**: Gently bend your index finger, keeping your wrist straight, and then release. Repeat for 10-15 repetitions, 3-4 times a day.\n2.  **Finger spreads**: Spread your index finger as far as you can, and then release. Repeat for 10-15 repetitions, 3-4 times a day.\n3.  **Finger extensions**: Hold a light weight (less than 1 pound) or a resistance band in your hand and slowly extend your index finger. Repeat for 10-15 repetitions, 3-4 times a day.\n4.  **Wrist rotations**: Hold a light weight or resistance band in your hand and rotate your wrist in both clockwise and counterclockwise directions. Repeat for 10-15 repetitions, 3-4 times a day.\n\n**Preventing future injuries:**\n\n1.  **Warm up**: Before climbing, warm up your hands and fingers with light exercises and stretching.\n2.  **Use proper climbing techniques**: Focus on using your legs and core to climb, rather than relying solely on your fingers.\n3.  **Take regular breaks**: Give your fingers a break and rest for a few minutes every hour to reduce fatigue and prevent overuse.\n4.  **Maintain finger health**: Regularly stretch and strengthen your fingers to prevent finger fatigue and reduce the risk of injury.\n\n**When to seek medical attention:**\nIf you experience any of the following symptoms, seek medical attention:\n\n*   Severe pain or swelling\n*   Difficulty moving your finger or wrist\n*   Numbness or tingling in your finger or hand\n*   A popping or snapping sound at the time of injury\n\nIf you're unsure about the severity of your injury or if you've experienced a more severe strain, consult with a medical professional or a sports medicine specialist for proper evaluation and treatment."
+
+    gold_answer = "Rehabilitating an A2 pulley injury requires a comprehensive approach that addresses the injury's severity, promotes healing, and prevents future occurrences. Here are possible steps to rehab an A2 pulley injury:\n\n1.  **Initial Treatment**: The first step is to protect the injured area and avoid activities that exacerbate the injury. This may involve immobilizing the finger, using a splint or tape to support the pulley, and avoiding heavy lifting or bending.\n2.  **Active Range of Motion**: Once the initial inflammation has subsided, it's essential to start moving the finger through its range of motion. This can be done by gently flexing and extending the finger, and gradually increasing the range of motion over time.\n3.  **Soft Tissue Mobilization**: Soft tissue mobilization, such as instrument-assisted soft tissue mobilization (IASTM), can help promote healing and reduce scar tissue. This involves using a tool to apply gentle pressure to the affected area, promoting the breakdown of scar tissue and promoting healing.\n4.  **Diet and Sleep**: Adequate nutrition and sleep are crucial for healing. A diet rich in anti-inflammatory foods, such as salmon, and adequate sleep can help promote healing and reduce inflammation.\n5.  **Exercise**: Gentle exercises, such as finger bends and extensions, can help promote healing and strengthen the surrounding muscles. It's essential to avoid heavy lifting or bending, which can exacerbate the injury.\n6.  **H-Taping**: H-taping can provide additional support and stability to the injured area, helping to prevent further injury.\n7.  **Retraining**: Once the injury has healed, it's essential to retrain the finger to handle the stresses of climbing. This can involve gradually increasing the intensity and duration of climbing activities, as well as incorporating exercises to strengthen the surrounding muscles.\n8.  **Progressive V-Scale Ladder**: When returning to climbing, it's essential to follow a progressive V-scale ladder to avoid overexertion and prevent further injury. This involves gradually increasing the difficulty of climbs over time, allowing the finger to adapt to the stresses of climbing.\n\nIt's essential to note that the rehabilitation process may vary depending on the severity of the injury and individual factors. It's always best to consult with a medical professional or a qualified healthcare provider for personalized guidance and treatment."
