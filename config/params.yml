@@ -68,5 +68,3 @@ audio:
   exe: "/Users/isyana/dev2/dragtor/transcribe"
   model: "/Users/isyana/dev2/dragtor/models/ggml-base.en.bin"
   files: "/Users/isyana/dev2/dragtor/data/audio_files/"
-creds:
-  jina: "jina_106648960c5647c289ca2a0b387b3726KQVdm7hIM3z0iAnAjQbBOOR9m0Z0"
