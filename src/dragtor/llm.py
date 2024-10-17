@@ -11,6 +11,8 @@ from typing import Self
 
 from loguru import logger
 import requests
+from requests.adapters import HTTPAdapter
+from urllib3.util.retry import Retry
 
 from dragtor import config
 from dragtor.index.index import Index, get_index
@@ -52,6 +54,8 @@ class LlamaServerHandler:
         self._port = port
         self.url = f"http://{self._host}:{self._port}"
         self.modelpath = Path(self.modelpath)
+        # Setting up session with retries
+        self.session = self._setup_http_session()
 
         self._checkpoint_dir = Path(config.conf.base_path) / "checkpoints"
         if not self._checkpoint_dir.exists():
@@ -100,6 +104,33 @@ class LlamaServerHandler:
         self.p.terminate()
         self._temp_kwargs.clear()
 
+    def _setup_http_session(self):
+        # Set up retry strategy for health check and main request
+        retry_strategy = Retry(
+            total=5,  # Retry up to 5 times
+            backoff_factor=5,  # Wait time increases with each retry (e.g., 5s, 10s)
+            status_forcelist=[500, 502, 503, 504],  # Retry on these status codes
+            allowed_methods=["GET", "POST"],  # Allow retries on GET and POST methods
+        )
+
+        adapter = HTTPAdapter(max_retries=retry_strategy)
+        session = requests.Session()
+        session.mount("http://", adapter)
+        session.mount("https://", adapter)
+        return session
+
+    def _server_health_check(self):
+        url = f"http://{self._host}:{self._port}/health"
+
+        # Health check
+        try:
+            server_health = self.session.get(url)
+            logger.debug(f"Llama server health check: {server_health.status_code}")
+            return server_health.status_code
+        except requests.RequestException as e:
+            logger.error(f"Failed to check server health: {e}")
+            return None
+
     def query_llm(self, prompt: str, **kwargs) -> str:
         """Send a query to the llama server.
 
@@ -114,8 +145,13 @@ class LlamaServerHandler:
         }
         data.update(kwargs)
 
+        server_status = self._server_health_check()
+        if server_status != 200:
+            logger.error(f"Llama server is down with status code: {server_status}")
+            return ""
+
         try:
-            response = requests.post(url, headers=headers, data=json.dumps(data))
+            response = self.session.post(url, headers=headers, data=json.dumps(data))
             response.raise_for_status()
             if response.status_code != 200:
                 logger.error(f"Recieved response status {response.status_code}")
@@ -134,8 +170,13 @@ class LlamaServerHandler:
         }
         data.update(kwargs)
 
+        server_status = self._server_health_check()
+        if server_status != 200:
+            logger.error(f"Llama server is down with status code: {server_status}")
+            return ""
+
         try:
-            response = requests.post(url, headers=headers, data=json.dumps(data))
+            response = self.session.post(url, headers=headers, data=json.dumps(data))
             response.raise_for_status()
             if response.status_code != 200:
                 logger.error(f"Recieved response status {response.status_code}")
