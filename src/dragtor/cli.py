@@ -4,7 +4,7 @@ import fire
 from loguru import logger
 from omegaconf import OmegaConf
 
-from dragtor import config, data
+from dragtor import config, data, audio_loader
 from dragtor.index.index import get_index
 from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor
@@ -33,7 +33,7 @@ class Cli:
         audio_urls = config.conf.data.audio_urls
         logger.debug(f"loading audio urls:\n{audio_urls}")
         for audio_url in audio_urls:
-            audio_loader.AudioLoader().transcribe(audio_url, diarize=False)
+            audio_loader.AudioLoader().transcribe_to_file(audio_url, diarize=False)
         logger.info("Loaded audio data successfully")
 
     def clear_index(self):
