@@ -27,7 +27,7 @@ store:
   n_query: 10
   chromadb:
     path: chroma_db
-    collection_name: experiment
+    collection_name: main_collection
     # valid distances: l2, ip, cosine
     distance: cosine
 reranker:
@@ -36,7 +36,7 @@ reranker:
   n_ranked: 10
 index:
   # valid strategies: basic [default], late_chunking
-  strategy: basic
+  strategy: default
 model:
   # host: 127.0.0.1
   # port: 8080
