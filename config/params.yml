@@ -43,8 +43,8 @@ model:
   file_path: "/Users/mischa/Projects/local/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
   max_completion_tokens: 512
   kwargs:
-    --gpu-layers: 15
-    --ctx-size: 10000
+    gpu-layers: 15
+    ctx-size: 15000
 prompts:
   system: >
     You are an assistant who provides advice on health care and training questions for climbers.

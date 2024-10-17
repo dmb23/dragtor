@@ -1,5 +1,7 @@
 """Process Logic for dRAGtor application. Neatly packed as a CLI"""
 
+import hashlib
+
 import fire
 from loguru import logger
 from omegaconf import OmegaConf
@@ -49,6 +51,22 @@ class Cli:
         logger.info("Indexed all cached data successfully")
 
     @logger.catch
+    def preload(self):
+        """Create pre-loaded state files for all loaded sources for retrieval"""
+        loader = data.JinaLoader()
+        full_texts = loader.get_cache()
+
+        ld = LocalDragtor()
+        for i, text in enumerate(full_texts):
+            text_id = hashlib.md5(text.encode("utf-8")).hexdigest()
+            messages = ld._to_messages(question="", context=text)
+            stop_loc = messages[1]["content"].find("\nquestion:\n\n")
+            messages[1]["content"] = messages[1]["content"][:stop_loc]
+            filename = f"{text_id}.bin"
+            ld.llm.store_state(messages, filename)
+            logger.info(f"Preloaded {i+1}/{len(full_texts)} texts")
+
+    @logger.catch
     def search(self, question: str) -> str:
         """Find helpful information to answer the question"""
         index = get_index()
@@ -58,9 +76,9 @@ class Cli:
         return "\n---\n".join([f"{i+1}: {r}" for i, r in enumerate(results)])
 
     @logger.catch
-    def ask(self, question: str) -> str:
-        """Get an answer to your question based on the existing resources"""
-        return LocalDragtor().chat(question)
+    def ask(self, question: str, statefile: str = "") -> str:
+        """Get an answer to your question based on the content of a file from the index cache"""
+        return LocalDragtor().chat(question, statefile)
 
 
 def entrypoint():

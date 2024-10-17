@@ -1,7 +1,8 @@
 """mostly to check that the commands run, and to allow to debug inside"""
 
-from dragtor.cli import Cli
 import pytest
+
+from dragtor.cli import Cli
 
 
 @pytest.fixture
@@ -9,29 +10,31 @@ def question() -> str:
     return "How can I treat a mild A2 pulley strain?"
 
 
-@pytest.mark.skip(reason="TODO")
-def test_cli_load(caplog):
+def test_cli_load(caplog, empty_store):
     Cli().load()
     print(caplog.text)
     assert "Loaded data successfully" in caplog.text
     pass
 
 
-@pytest.mark.skip(reason="TODO")
-def test_cli_index(caplog):
+def test_cli_index(caplog, empty_store):
     Cli().index()
     assert "Indexed all cached data successfully" in caplog.text
 
 
-@pytest.mark.skip(reason="TODO")
-def test_cli_search(question: str):
+def test_cli_search(question: str, full_store):
     found_texts = Cli().search(question)
 
     assert len(found_texts) > 0
 
 
-@pytest.mark.skip(reason="TODO")
-def test_cli_ask(question: str):
+def test_cli_preload(full_store, caplog):
+    Cli().preload()
+
+    assert "Preloaded 1/" in caplog.text
+
+
+def test_cli_ask(question: str, full_store):
     answer = Cli().ask(question)
 
     assert len(answer) > 0
