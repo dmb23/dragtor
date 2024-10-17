@@ -16,6 +16,7 @@ from pathlib import Path
 
 from loguru import logger
 from pydantic import BaseModel
+import pysbd
 
 from dragtor import data, llm
 
@@ -53,7 +54,62 @@ class Propositions(BaseModel):
     propositions: list[str]
 
 
+def _extract_new_propositions(sentence: str, existing_props: Propositions) -> Propositions:
+    sys_prompt = """
+    Decompose the "Content" into clear and simple propositions, ensuring they are interpretable out of context.
+    1. Split compound sentence into simple sentences. Maintain the original phrasing from the input whenever possible.
+    2. For any named entity that is accompanied by additional descriptive information, separate this information into its own distinct proposition.
+    3. Decontextualize the proposition by adding necessary modifier to nouns or entire sentences and replacing pronouns (e.g., "it", "he", "she", "they", "this", "that") with the full name of the entities they refer to.
+    4. Present the results as a list of strings, formatted in JSON. Return only the JSON output.
+    """
+
+
 def get_propositions(text: str) -> Propositions:
+    """
+    - text -> sentences
+    - sentence -> propositions
+    - decide if proposition should be included or not
+    """
+    sys_prompt = """
+    You recieve context and a relevant sentence. Decontextualize the sentence so that it is understandable on its own.
+    For that add necessary modifiers to nouns or subphrases and replace pronouns (e.g. "it", "he", "she", "they", "this", "that") with the full name of the entities they refere to.
+    Return only the decontextualized sentence.
+    """
+
+    user_prompt_template = """
+    <context>
+    {context}
+    </context>
+
+    Decontextualize the following sentence:
+    <sentence>
+    {sentence}
+    </sentence>
+    """
+
+    seg = pysbd.Segmenter(language="en", clean=False)
+    sentences = seg.segment(text)
+    logger.info(sentences)
+
+    decontextualized = []
+    for i, sentence in enumerate(sentences):
+        context = " ".join(sentences[:i])
+
+        messages = Messages()
+        messages.system(sys_prompt)
+        messages.user(user_prompt_template.format(context=context, sentence=sentence))
+
+        answer = lsh.chat_llm(messages.format(), cache_prompt=True)
+        logger.debug(f"---\n{sentence}\n-\n{answer}\n")
+
+        decontextualized.append(answer)
+
+    logger.info(decontextualized)
+
+    return decontextualized
+
+
+def get_propositions_old(text: str) -> Propositions:
     sys_prompt = """
     Decompose the "Content" into clear and simple propositions, ensuring they are interpretable out of context.
     1. Split compound sentence into simple sentences. Maintain the original phrasing from the input whenever possible.
@@ -197,6 +253,8 @@ if __name__ == "__main__":
 
     if do_get_propositions:
         props = get_propositions(answer)
+
+        raise NotImplementedError
     else:
         props = Propositions(
             propositions=[
