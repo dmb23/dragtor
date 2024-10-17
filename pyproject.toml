@@ -3,14 +3,15 @@ name = "dragtor"
 version = "0.1.0"
 description = "An exploration of non-GPU RAG approaches to built an RAG-Doctor"
 readme = "README.md"
-requires-python = ">=3.11, <3.12"
+requires-python = ">=3.11"
 dependencies = [
     "chromadb>=0.5.5",
     "omegaconf>=2.3.0",
     "loguru>=0.7.2",
     "fire>=0.6.0",
     "sentence-transformers>=3.0.1",
-    "pyannote.audio>=3.3.2"
+    "pyannote.audio>=3.3.2",
+    "langchain-text-splitters>=0.3.0"
 ]
 
 [project.scripts]

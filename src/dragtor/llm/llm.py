@@ -1,3 +1,4 @@
+from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 import functools

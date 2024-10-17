@@ -46,7 +46,7 @@ def parse_transcript(transcript: str):
     transcript_segments = []
     for match in re.finditer(pattern, transcript):
         text = match.group(7).strip()
-        clean_text = re.sub(r"[^a-zA-Z0-9.,'\s]", "", text)
+        clean_text = re.sub(r"[^a-zA-Z0-9.,'?\-\s]", "", text)
 
         transcript_segments.append(clean_text)
 
