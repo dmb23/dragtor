@@ -3,6 +3,8 @@ data:
   jina_cache: "jina_reader/"
   hoopers_urls:
     - "test_blog"
+  audio_cache: "audio_transcript/"
+  diarize_cache: "diarize_transcript/"
 embeddings:
   strategy: default
 store:
