@@ -70,10 +70,7 @@ class AudioLoader:
         output, error = process.communicate()
 
         decoded_str = output.decode('utf-8').strip()
-        # Remove the '[BLANK_AUDIO]' placeholder
-        without_placeholder = decoded_str.replace('[BLANK_AUDIO]', '').strip()
-        # Step 2: Use regex to remove all non-alphanumeric characters except commas, dots, and spaces
-        processed_str = re.sub(r'[^a-zA-Z0-9.,\s]', '', without_placeholder)
+        processed_str = decoded_str.replace('[BLANK_AUDIO]', '').strip()
 
         if diarize:
             diarize_str = audio_diarize(audio_path, num_speakers=num_speakers, min_speakers=min_speakers, max_speakers=max_speakers)
