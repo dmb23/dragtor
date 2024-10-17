@@ -10,6 +10,7 @@ dependencies = [
     "loguru>=0.7.2",
     "fire>=0.6.0",
     "sentence-transformers>=3.0.1",
+    "pyannote.audio>=3.3.2"
 ]
 
 [project.scripts]

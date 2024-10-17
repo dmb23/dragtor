@@ -9,6 +9,11 @@ data:
     # - "https://www.hoopersbeta.com/library/how-to-heal-from-a-lumbrical-injury-5-simple-stages-to-recover"
     # - "https://www.hoopersbeta.com/library/flexor-tenosynovitis"
     # - "https://www.hoopersbeta.com/library/will-hangboarding-2x/day-improve-your-climbing-ultimate-revised-breakdown"
+  audio_cache: "audio_transcript/"
+  audio_urls:
+#     - "https://cdn-media.huggingface.co/speech_samples/sample2.flac"
+    - "https://cdn.simplecast.com/audio/8d0e41cc-be61-4d71-ab0d-b985db72bb92/episodes/42685a36-6381-4017-ad34-48fe1822e83e/audio/2c2a3b1c-7b39-4852-a947-6f7ea10dbf98/default_tc.mp3"
+  diarize_cache: "diarize_transcript/"
 chunking:
   # valid strategies: paragraph [default], jina_tokenizer
   strategy: default
@@ -61,3 +66,8 @@ prompts:
     answer:
 server:
   backoff: 1.0
+
+audio:
+  exe: "/Users/mischa/Projects/local/dragtor/transcribe"
+  model: "/Users/mischa/Projects/local/dragtor/models/ggml-base.en.bin"
+  files: "/Users/mischa/Projects/local/dragtor/data/audio_files/"
