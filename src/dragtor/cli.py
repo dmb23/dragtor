@@ -1,7 +1,5 @@
 """Process Logic for dRAGtor application. Neatly packed as a CLI"""
 
-import hashlib
-
 import fire
 from loguru import logger
 from omegaconf import OmegaConf
@@ -10,6 +8,7 @@ from dragtor import config, data
 from dragtor.index.index import get_index
 from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor
+from dragtor.utils import ident
 
 
 class Cli:
@@ -58,7 +57,7 @@ class Cli:
 
         ld = LocalDragtor()
         for i, text in enumerate(full_texts):
-            text_id = hashlib.md5(text.encode("utf-8")).hexdigest()
+            text_id = ident(text)
             messages = ld._to_messages(question="", context=text)
             stop_loc = messages[1]["content"].find("\nquestion:\n\n")
             messages[1]["content"] = messages[1]["content"][:stop_loc]
