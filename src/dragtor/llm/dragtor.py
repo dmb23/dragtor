@@ -1,6 +1,5 @@
 from collections import deque
 from dataclasses import dataclass, field
-import hashlib
 from pathlib import Path
 
 from loguru import logger
@@ -8,6 +7,7 @@ from loguru import logger
 from dragtor import config
 from dragtor.index.index import Index, get_index
 from dragtor.llm.llm import LlamaServerHandler
+from dragtor.utils import ident
 
 
 @dataclass
@@ -77,7 +77,7 @@ class LocalDragtor:
                 result = self.llm.chat_llm(messages, **kwargs)
         else:
             context = Path(contextfile).resolve().read_text()
-            context_id = hashlib.md5(context.encode("utf-8")).hexdigest()
+            context_id = ident(context)
             statefile = f"{context_id}.bin"
             messages = self._to_messages(question, context)
             result = self.llm.chat_from_state(messages, statefile, **kwargs)
