@@ -59,8 +59,6 @@ class Cli:
         for i, text in enumerate(full_texts):
             text_id = ident(text)
             messages = ld._to_messages(question="", context=text)
-            stop_loc = messages[1]["content"].find("\nquestion:\n\n")
-            messages[1]["content"] = messages[1]["content"][:stop_loc]
             filename = f"{text_id}.bin"
             ld.llm.store_state(messages, filename)
             logger.info(f"Preloaded {i+1}/{len(full_texts)} texts")
