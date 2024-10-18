@@ -1,5 +1,6 @@
 from dataclasses import dataclass, field
-from enum import Enum
+from enum import Enum, IntEnum
+import functools
 import json
 from pathlib import Path
 import shlex
@@ -9,8 +10,27 @@ from typing import Self
 
 from loguru import logger
 import requests
+from requests.adapters import HTTPAdapter, Retry
 
 from dragtor import config
+from dragtor.utils import Messages
+
+
+class ServerState(IntEnum):
+    DOWN = 0
+    UP = 1
+    BUSY = 2
+    UNKNOWN = -1
+
+
+class CheckYourServerException(Exception):
+    pass
+
+
+class SlotAction(Enum):
+    SAVE = "save"
+    RESTORE = "restore"
+    ERASE = "erase"
 
 
 @dataclass
@@ -35,11 +55,6 @@ class LlamaServerHandler:
     _checkpoint_dir: Path = field(init=False)
     _kwargs: dict = field(init=False)
     _temp_kwargs: dict = field(init=False, default_factory=dict)
-
-    class SlotAction(Enum):
-        SAVE = "save"
-        RESTORE = "restore"
-        ERASE = "erase"
 
     def __post_init__(self):
         self._host = config.conf.select("model.host", default="127.0.0.1")
@@ -97,6 +112,47 @@ class LlamaServerHandler:
         self.p.terminate()
         self._temp_kwargs.clear()
 
+    def _check_for_server(self):
+        url = f"{self.url}/health"
+        s = requests.Session()
+        retries = Retry(total=5, backoff_factor=0.2, status_forcelist=[503])
+        s.mount(url, HTTPAdapter(max_retries=retries))
+
+        try:
+            response = s.get(url)
+        except Exception:
+            return ServerState.DOWN
+
+        match response.status_code:
+            case 200:
+                return ServerState.UP
+            case 503:
+                logger.debug("Server still loading model after retries")
+                return ServerState.BUSY
+            case _:
+                logger.warning(f"Unexpected response from llama-server health check:\n{response}")
+                return ServerState.UNKNOWN
+
+    @staticmethod
+    def _run_with_server(func):
+        @functools.wraps(func)
+        def wrapper_decorator(self, *args, **kwargs):
+            state = self._check_for_server()
+            match state:
+                case ServerState.UP:
+                    # server is running externally
+                    return func(self, *args, **kwargs)
+                case ServerState.DOWN:
+                    # start up the server for the function call
+                    with self:
+                        value = func(self, *args, **kwargs)
+                    return value
+                case ServerState.BUSY | ServerState.UNKNOWN:
+                    raise CheckYourServerException
+
+        return wrapper_decorator
+
+    @_run_with_server
     def query_llm(self, prompt: str, **kwargs) -> str:
         """Send a query to the llama server.
 
@@ -122,11 +178,12 @@ class LlamaServerHandler:
             logger.error(f"Error querying Llama server: {e}")
             return ""
 
-    def chat_llm(self, messages: list[dict], **kwargs) -> str:
+    @_run_with_server
+    def chat_llm(self, messages: Messages, **kwargs) -> str:
         url = f"{self.url}/chat/completions"
         headers = {"Content-Type": "application/json"}
         data = {
-            "messages": messages,
+            "messages": messages.format(),
             "n_predict": config.conf.select("model.max_completion_tokens", default=128),
         }
         data.update(kwargs)
@@ -143,13 +200,13 @@ class LlamaServerHandler:
             return ""
 
     def _manage_slot_state(self, action: SlotAction, filename: str = "", slot_id: int = 0):
-        if action == LlamaServerHandler.SlotAction.SAVE and filename == "":
+        if action == SlotAction.SAVE and filename == "":
             logger.error("You need to provide a file to store a model state to.")
             return
-        if action == LlamaServerHandler.SlotAction.RESTORE and filename == "":
+        if action == SlotAction.RESTORE and filename == "":
             logger.error("You need to provide a file to restore a model state from.")
             return
-        if action == LlamaServerHandler.SlotAction.ERASE and filename != "":
+        if action == SlotAction.ERASE and filename != "":
             logger.warning(
                 "You provided a file for model state, ignored for erasing the slot memory!"
             )
@@ -157,7 +214,7 @@ class LlamaServerHandler:
         url = f"{self.url}/slots/{slot_id}?action={action.value}"
         kwargs = {}
         kwargs["headers"] = {"Content-Type": "application/json"}
-        if action != LlamaServerHandler.SlotAction.ERASE:
+        if action != SlotAction.ERASE:
             kwargs["data"] = json.dumps(
                 {
                     "filename": filename,
@@ -176,23 +233,21 @@ class LlamaServerHandler:
         except requests.RequestException as e:
             logger.error(f"Error querying Llama server: {e}")
 
-    def store_state(self, messages: list[dict], filename: str):
+    @_run_with_server
+    def store_state(self, messages: Messages, filename: str):
         statefile = Path(self._checkpoint_dir) / filename
         statefile.parent.mkdir(parents=True, exist_ok=True)
         statefile.unlink(missing_ok=True)
         statefile.touch()
-        with self:
-            self.chat_llm(messages, cache_prompt=True)
-            self._manage_slot_state(
-                LlamaServerHandler.SlotAction.SAVE, slot_id=0, filename=filename
-            )
 
-    def chat_from_state(self, messages: list[dict], filename: str) -> str:
-        with self:
-            self._manage_slot_state(
-                LlamaServerHandler.SlotAction.RESTORE, slot_id=0, filename=filename
-            )
-            response = self.chat_llm(messages, cache_prompt=True)
+        self._manage_slot_state(SlotAction.ERASE, slot_id=0)
+        self.chat_llm(messages, cache_prompt=True)
+        self._manage_slot_state(SlotAction.SAVE, slot_id=0, filename=filename)
+
+    @_run_with_server
+    def chat_from_state(self, messages: Messages, filename: str) -> str:
+        self._manage_slot_state(SlotAction.RESTORE, slot_id=0, filename=filename)
+        response = self.chat_llm(messages, cache_prompt=True)
 
         return response
 

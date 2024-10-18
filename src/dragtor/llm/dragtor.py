@@ -7,7 +7,7 @@ from loguru import logger
 from dragtor import config
 from dragtor.index.index import Index, get_index
 from dragtor.llm.llm import LlamaServerHandler
-from dragtor.utils import ident
+from dragtor.utils import Messages, ident
 
 
 @dataclass
@@ -51,18 +51,11 @@ class LocalDragtor:
             prompt = "\n\n".join([self.system_prompt, prompt])
         return prompt
 
-    def _to_messages(self, question: str, context: str) -> list[dict]:
+    def _to_messages(self, question: str, context: str) -> Messages:
         first_prompt = self._expand_user_prompt(question, context, is_chat=True)
-        messages = [
-            {
-                "role": "system",
-                "content": self.system_prompt,
-            },
-            {
-                "role": "user",
-                "content": first_prompt,
-            },
-        ]
+        messages = Messages()
+        messages.system(self.system_prompt)
+        messages.user(first_prompt)
         return messages
 
     def chat(self, question: str, contextfile: str = "", **kwargs) -> str:
