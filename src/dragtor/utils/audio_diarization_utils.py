@@ -8,8 +8,8 @@ from dragtor import config
 from pyannote.audio import Pipeline
 
 
-def audio_diarize(audio_path: str, diarize_model: str = "pyannote/speaker-diarization-3.1", num_speakers: int = 1,
-                  min_speakers: int = 1, max_speakers: int = 1, device: str = "mps") -> str:
+def audio_diarize(audio_path: str, diarize_model: str = None, num_speakers: int = None,
+                  min_speakers: int = None, max_speakers: int = None, device: str = None) -> str:
     """
     Run diarize function to differentiate audio transcription between different speakers.
 
@@ -24,6 +24,9 @@ def audio_diarize(audio_path: str, diarize_model: str = "pyannote/speaker-diariz
     Returns:
         String: Speakers' audio timestamps.
     """
+    diarize_model = diarize_model or config.conf.audio.diarization_model
+    device = device or config.conf.device
+
     logger.info(f"Diarize {audio_path}")
     output_dir = Path(config.conf.base_path) / config.conf.data.diarize_cache
     output_dir.mkdir(exist_ok=True)
@@ -49,7 +52,7 @@ def audio_diarize(audio_path: str, diarize_model: str = "pyannote/speaker-diariz
     return diarization_str
 
 
-def parse_audio_transcript(transcript: str):
+def parse_audio_transcript(transcript: str) -> list[dict()]:
     """Reformat timestamp from raw transcription into seconds."""
     # Regex to match [hh:mm:ss.xxx --> hh:mm:ss.xxx] and the following text
     pattern = r"\[(\d+):(\d+):([\d.]+)\.\d+ --> (\d+):(\d+):([\d.]+)\.\d+\]\s+(.+)"
@@ -71,7 +74,7 @@ def parse_audio_transcript(transcript: str):
     return transcript_segments
 
 
-def parse_diarization(diarization: str):
+def parse_diarization(diarization: str) -> list[dict()]:
     """Reformat timestamp from raw diarization into seconds."""
     # Regex to match [Speaker SPEAKER_xx: ss.x to ss.x]
     pattern = r"Speaker (\S+): (\d+\.\ds) to (\d+\.\ds)"
@@ -90,7 +93,7 @@ def parse_diarization(diarization: str):
     return speaker_segments
 
 
-def align_transcription_with_speakers(audio_path: str, audio_segments, diarization_segments):
+def align_transcription_with_speakers(audio_path: str, audio_segments, diarization_segments) -> list[dict()]:
     """
     Matches audio transcription and diarization using timestamp. Missing intervals will follow the nearest timestamp between segments.
 
@@ -174,7 +177,7 @@ def align_transcription_with_speakers(audio_path: str, audio_segments, diarizati
     return grouped_transcription
 
 
-def group_transcription_by_speaker(aligned_transcription):
+def group_transcription_by_speaker(aligned_transcription) -> list[dict()]:
     """Groups multiple transcript segments with the same speaker into one line of dialogue"""
     grouped_transcription = []
     current_speaker = None

@@ -7,6 +7,7 @@ from loguru import logger
 from pathlib import Path
 from dragtor import config
 
+
 def preprocess_audio_file(audio_path: str) -> Path:
     """
     Prepares audio file into .wav format to match the model requirement.
@@ -29,6 +30,7 @@ def preprocess_audio_file(audio_path: str) -> Path:
 
     return file_path
 
+
 def convert_to_wav(audio_path: Path) -> Path:
     """Converts non-wav audio file into .wav file."""
     if audio_path.suffix.lower() != ".wav":
@@ -38,7 +40,8 @@ def convert_to_wav(audio_path: Path) -> Path:
         return wav_file
     return audio_path
 
-def parse_transcript(transcript: str):
+
+def parse_transcript(transcript: str) -> str:
     """Remove timestamp from raw transcription output and collect it as a paragraph."""
     # Regex to match [hh:mm:ss.xxx --> hh:mm:ss.xxx] and the following text
     pattern = r"\[(\d+):(\d+):([\d.]+)\.\d+ --> (\d+):(\d+):([\d.]+)\.\d+\]\s+(.+)"
@@ -52,6 +55,7 @@ def parse_transcript(transcript: str):
 
     return transcript_segments
 
+
 def cleanup():
     """Remove temporary folders for storing audio file and diarize transcript."""
     delete_path = [Path(config.conf.base_path) / config.conf.data.diarize_cache, Path(config.conf.audio.files)]
@@ -61,4 +65,3 @@ def cleanup():
             logger.info(f"Cleared cache: {path}")
         else:
             logger.info(f"Folder not found: {path}")
-

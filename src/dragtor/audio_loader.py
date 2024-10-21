@@ -19,6 +19,7 @@ class AudioLoader:
     Methods
         transcribe_to_file(audio_path): Transcribes the audio and saves the result to a file. Set diarize=True to use diarization functionality.
     """
+
     def __init__(self, outdir=None):
         self.model_path = config.conf.audio.model
         self.outdir: Path
@@ -27,7 +28,8 @@ class AudioLoader:
         else:
             self.outdir = Path(config.conf.base_path) / config.conf.data.audio_cache
 
-    def transcribe_to_file(self, audio_path: str, language: str = "en", diarize: bool = False, num_speakers: int = 1, min_speakers: int = 1, max_speakers: int = 1) -> None:
+    def transcribe_to_file(self, audio_path: str, language: str = None, diarize: bool = False, num_speakers: int = None,
+                           min_speakers: int = None, max_speakers: int = None) -> None:
         """
         Transcribe the audio file or URL provided in the config file and save it to a file.
 
@@ -40,6 +42,12 @@ class AudioLoader:
         Returns:
             None: This function does not return any value. The transcription is saved as a file.
         """
+        # Set default values from config if not provided
+        language = language or config.conf.audio.lang
+        num_speakers = num_speakers or config.conf.audio.num_speakers
+        min_speakers = min_speakers or config.conf.audio.min_speakers
+        max_speakers = max_speakers or config.conf.audio.max_speakers
+
         self.outdir.mkdir(exist_ok=True)
 
         try:
@@ -73,7 +81,8 @@ class AudioLoader:
         processed_str = decoded_str.replace('[BLANK_AUDIO]', '').strip()
 
         if diarize:
-            diarize_str = audio_diarize(audio_path, num_speakers=num_speakers, min_speakers=min_speakers, max_speakers=max_speakers)
+            diarize_str = audio_diarize(audio_path, num_speakers=num_speakers, min_speakers=min_speakers,
+                                        max_speakers=max_speakers)
             # Standardize the timestamp format of transcription & speaker diarization output
             audio_segments = parse_audio_transcript(processed_str)
             diarize_segments = parse_diarization(diarize_str)
