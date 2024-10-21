@@ -1,11 +1,14 @@
 from dataclasses import dataclass, field
 from enum import Enum
 import json
+from pathlib import Path
 
 from loguru import logger
 from pydantic import BaseModel
 
+from dragtor import config
 from dragtor.llm import LlamaServerHandler
+from dragtor.llm.dragtor import LocalDragtor
 from dragtor.utils import Messages
 
 # ruff: noqa: E501
@@ -74,13 +77,13 @@ class EvalAnswerCorrectness(BaseModel):
     fp: list[TruthCategory]
     fn: list[TruthCategory]
 
-    def f1_score(self) -> Float:
+    def f1_score(self) -> float:
         if len(self.tp) == 0:
             return 0
         return len(self.tp) / (len(self.tp) + 0.5 * (len(self.fp) + len(self.fn)))
 
 
-def get_propositions(text: str) -> Propositions:
+def _get_propositions(text: str) -> Propositions:
     """Extract propositions from a given text.
 
     I.e. extract all statements from a text in a way that they can be understood in isolation.
@@ -142,14 +145,15 @@ def get_propositions(text: str) -> Propositions:
     return propositions
 
 
-def get_faithfullness(props: Propositions, context: str) -> EvalFaithful:
-    """For a list of propositions, which of those are inferred from the context?
+def _get_faithfullness(answer: str, context: str) -> EvalFaithful:
+    """Which statements made in an answer are inferred from the context?
 
     Allows to measure how strongly an answer is only based on the provided context
     and how strongly the LLM includes background knowledge.
 
     Taken mostly from [Ragas](https://github.com/explodinggradients/ragas/blob/main/src/ragas/metrics/_faithfulness.py).
     """
+    props = _get_propositions(answer)
 
     def _format_user_message(statements: list[str], context: str) -> str:
         """format used for querying the model"""
@@ -216,14 +220,14 @@ def get_faithfullness(props: Propositions, context: str) -> EvalFaithful:
     return ef
 
 
-def get_answer_correctness(model_answer: str, gold_answer: str) -> EvalAnswerCorrectness:
+def _get_answer_correctness(model_answer: str, gold_answer: str) -> EvalAnswerCorrectness:
     """Evaluate a model answer against a "gold-truth" reference.
 
     Following mostly concepts from [Ragas](https://github.com/explodinggradients/ragas/blob/main/src/ragas/metrics/_answer_correctness.py)
     """
-    props_model_answer = get_propositions(model_answer)
+    props_model_answer = _get_propositions(model_answer)
     logger.debug(f"{props_model_answer=}")
-    props_gold_answer = get_propositions(gold_answer)
+    props_gold_answer = _get_propositions(gold_answer)
     logger.debug(f"{props_gold_answer=}")
 
     sys_prompt = """
@@ -286,14 +290,37 @@ def get_answer_correctness(model_answer: str, gold_answer: str) -> EvalAnswerCor
 @dataclass
 class QuestionEvaluator:
     question: str
+    faithfullness: EvalFaithful | None = field(init=False, default=None)
+    correctness: EvalAnswerCorrectness | None = field(init=False, default=None)
     _context: str = field(init=False)
     _answer: str = field(init=False)
-    _gold_truth: str | None = field(init=False)
+    _dragtor: LocalDragtor = field(init=False)
+    _gold_truth: str | None = field(init=False, default=None)
 
     def __post_init__(self):
-        raise NotImplementedError
+        logger.info("Loading context and answer for evaluation")
+        self._dragtor = LocalDragtor()
+
         # get context
+        self._context = self._dragtor._get_context(self.question)
+
         # get answer
+        self._answer = self._dragtor.chat(self.question)
+
         # check for available gold_truth
-        # evaluate for answer faithfullness
-        # if gold_truth: evaluate for answer correctness
+        gold_truth_file = (
+            Path(config.conf.base_path) / config.conf.eval.eval_dir / config.conf.eval.eval_answers
+        )
+        if gold_truth_file.exists() and gold_truth_file.is_file():
+            gold_answers = json.loads(gold_truth_file.read_text())
+            self._gold_truth = gold_answers.get(self.question, None)
+
+    def run_eval(self):
+        logger.info("Evaluating how faithfull the answer is to the context")
+        self.faithfullness = _get_faithfullness(self._answer, self._context)
+        logger.info(f"Faithfulness: {self.faithfullness.fraction_true():.0%}")
+
+        if self._gold_truth:
+            logger.info('Evaluating how close the answer is to the "golden" reference')
+            self.correctness = _get_answer_correctness(self._answer, self._gold_truth)
+            logger.info(f"Correctness: {self.correctness.f1_score():.0%}")

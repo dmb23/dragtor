@@ -8,6 +8,7 @@ from dragtor import config, data
 from dragtor.index.index import get_index
 from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor
+from dragtor.llm.eval import QuestionEvaluator
 from dragtor.utils import ident
 
 
@@ -87,13 +88,14 @@ class Cli:
         """
         raise NotImplementedError
 
-    def eval(self):
+    def eval(self, question: str):
         """Evaluate the performance of the configured RAG setup.
 
         - evaluate how many of the propositions in a given answer are based on the sources.
         - possibly: evaluate answers to reference questions against gold truths
         """
-        raise NotImplementedError
+        evaluator = QuestionEvaluator(question=question)
+        evaluator.run_eval()
 
 
 def entrypoint():

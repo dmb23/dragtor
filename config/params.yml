@@ -61,3 +61,6 @@ prompts:
     answer:
 server:
   backoff: 1.0
+eval:
+  eval_dir: "eval"
+  eval_answers: "gold_answers.json" 
