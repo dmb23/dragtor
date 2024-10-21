@@ -115,7 +115,7 @@ class LlamaServerHandler:
     def _check_for_server(self):
         url = f"{self.url}/health"
         s = requests.Session()
-        retries = Retry(total=5, backoff_factor=0.2, status_forcelist=[503])
+        retries = Retry(total=5, backoff_factor=config.conf.server.backoff, status_forcelist=[503])
         s.mount(url, HTTPAdapter(max_retries=retries))
 
         try:
