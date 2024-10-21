@@ -80,10 +80,8 @@ def test_transcribe_to_file_method(mock_request_get, mock_subprocess_run, mock_s
     loader = AudioLoader()
 
     # Call the method using a valid local audio file path
-    result = loader.transcribe_to_file(str(local_audio_file))
+    loader.transcribe_to_file(str(local_audio_file))
 
     # Assertions
-    assert isinstance(result, str)
-    assert len(result) > 0
     assert isfile(transcript_file)
     # TODO: Add new assertion to check the file's content

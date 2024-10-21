@@ -21,7 +21,10 @@ def preprocess_audio_file(audio_path: str) -> Path:
     logger.info(f"Processing: {audio_path}")
     if audio_path.startswith(("http://", "https://")):
         inputs = requests.get(audio_path).content
-        file_path = output_dir / "_".join(Path(audio_path).parts[-2:])
+
+        file_name = "_".join(audio_path.split("/")[-2:])  # To make sure the file name is unique
+        file_path = output_dir / file_name
+
         file_path.write_bytes(inputs)
         logger.debug(f"File downloaded and saved at {file_path}")
         file_path = convert_to_wav(file_path)
