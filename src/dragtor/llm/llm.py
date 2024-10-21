@@ -145,6 +145,9 @@ class LlamaServerHandler:
                 case ServerState.DOWN:
                     # start up the server for the function call
                     with self:
+                        state = self._check_for_server()
+                        if state != ServerState.UP:
+                            raise CheckYourServerException
                         value = func(self, *args, **kwargs)
                     return value
                 case ServerState.BUSY | ServerState.UNKNOWN:
