@@ -6,7 +6,8 @@ import fire
 from loguru import logger
 from omegaconf import OmegaConf
 
-from dragtor import config, data, audio_loader
+from dragtor import config, data
+from dragtor.audio import audio_loader
 from dragtor.index.index import get_index
 from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor

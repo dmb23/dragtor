@@ -1,7 +1,7 @@
 from collections import deque
 from dataclasses import dataclass, field
-from enum import Enum
-import hashlib
+from enum import Enum, IntEnum
+import functools
 import json
 from pathlib import Path
 import shlex
@@ -11,11 +11,27 @@ from typing import Self
 
 from loguru import logger
 import requests
-from requests.adapters import HTTPAdapter
-from urllib3.util.retry import Retry
+from requests.adapters import HTTPAdapter, Retry
 
 from dragtor import config
-from dragtor.index.index import Index, get_index
+from dragtor.utils import Messages
+
+
+class ServerState(IntEnum):
+    DOWN = 0
+    UP = 1
+    BUSY = 2
+    UNKNOWN = -1
+
+
+class CheckYourServerException(Exception):
+    pass
+
+
+class SlotAction(Enum):
+    SAVE = "save"
+    RESTORE = "restore"
+    ERASE = "erase"
 
 
 @dataclass
@@ -41,11 +57,6 @@ class LlamaServerHandler:
     _kwargs: dict = field(init=False)
     _temp_kwargs: dict = field(init=False, default_factory=dict)
 
-    class SlotAction(Enum):
-        SAVE = "save"
-        RESTORE = "restore"
-        ERASE = "erase"
-
     def __post_init__(self):
         self._host = config.conf.select("model.host", default="127.0.0.1")
         port = config.conf.select("model.port", default="8080")
@@ -54,8 +65,6 @@ class LlamaServerHandler:
         self._port = port
         self.url = f"http://{self._host}:{self._port}"
         self.modelpath = Path(self.modelpath)
-        # Setting up session with retries
-        self.session = self._setup_http_session()
 
         self._checkpoint_dir = Path(config.conf.base_path) / "checkpoints"
         if not self._checkpoint_dir.exists():
@@ -104,33 +113,50 @@ class LlamaServerHandler:
         self.p.terminate()
         self._temp_kwargs.clear()
 
-    def _setup_http_session(self):
-        # Set up retry strategy for health check and main request
-        retry_strategy = Retry(
-            total=5,  # Retry up to 5 times
-            backoff_factor=5,  # Wait time increases with each retry (e.g., 5s, 10s)
-            status_forcelist=[500, 502, 503, 504],  # Retry on these status codes
-            allowed_methods=["GET", "POST"],  # Allow retries on GET and POST methods
-        )
+    def _check_for_server(self):
+        url = f"{self.url}/health"
+        s = requests.Session()
+        retries = Retry(total=5, backoff_factor=config.conf.server.backoff, status_forcelist=[503])
+        s.mount(url, HTTPAdapter(max_retries=retries))
 
-        adapter = HTTPAdapter(max_retries=retry_strategy)
-        session = requests.Session()
-        session.mount("http://", adapter)
-        session.mount("https://", adapter)
-        return session
-
-    def _server_health_check(self):
-        url = f"http://{self._host}:{self._port}/health"
-
-        # Health check
         try:
-            server_health = self.session.get(url)
-            logger.debug(f"Llama server health check: {server_health.status_code}")
-            return server_health.status_code
-        except requests.RequestException as e:
-            logger.error(f"Failed to check server health: {e}")
-            return None
+            response = s.get(url)
+        except Exception:
+            return ServerState.DOWN
 
+        match response.status_code:
+            case 200:
+                return ServerState.UP
+            case 503:
+                logger.debug("Server still loading model after retries")
+                return ServerState.BUSY
+            case _:
+                logger.warning(f"Unexpected response from llama-server health check:\n{response}")
+                return ServerState.UNKNOWN
+
+    @staticmethod
+    def _run_with_server(func):
+        @functools.wraps(func)
+        def wrapper_decorator(self, *args, **kwargs):
+            state = self._check_for_server()
+            match state:
+                case ServerState.UP:
+                    # server is running externally
+                    return func(self, *args, **kwargs)
+                case ServerState.DOWN:
+                    # start up the server for the function call
+                    with self:
+                        state = self._check_for_server()
+                        if state != ServerState.UP:
+                            raise CheckYourServerException
+                        value = func(self, *args, **kwargs)
+                    return value
+                case ServerState.BUSY | ServerState.UNKNOWN:
+                    raise CheckYourServerException
+
+        return wrapper_decorator
+
+    @_run_with_server
     def query_llm(self, prompt: str, **kwargs) -> str:
         """Send a query to the llama server.
 
@@ -145,13 +171,8 @@ class LlamaServerHandler:
         }
         data.update(kwargs)
 
-        server_status = self._server_health_check()
-        if server_status != 200:
-            logger.error(f"Llama server is down with status code: {server_status}")
-            return ""
-
         try:
-            response = self.session.post(url, headers=headers, data=json.dumps(data))
+            response = requests.post(url, headers=headers, data=json.dumps(data))
             response.raise_for_status()
             if response.status_code != 200:
                 logger.error(f"Recieved response status {response.status_code}")
@@ -161,22 +182,18 @@ class LlamaServerHandler:
             logger.error(f"Error querying Llama server: {e}")
             return ""
 
-    def chat_llm(self, messages: list[dict], **kwargs) -> str:
+    @_run_with_server
+    def chat_llm(self, messages: Messages, **kwargs) -> str:
         url = f"{self.url}/chat/completions"
         headers = {"Content-Type": "application/json"}
         data = {
-            "messages": messages,
+            "messages": messages.format(),
             "n_predict": config.conf.select("model.max_completion_tokens", default=128),
         }
         data.update(kwargs)
 
-        server_status = self._server_health_check()
-        if server_status != 200:
-            logger.error(f"Llama server is down with status code: {server_status}")
-            return ""
-
         try:
-            response = self.session.post(url, headers=headers, data=json.dumps(data))
+            response = requests.post(url, headers=headers, data=json.dumps(data))
             response.raise_for_status()
             if response.status_code != 200:
                 logger.error(f"Recieved response status {response.status_code}")
@@ -187,13 +204,13 @@ class LlamaServerHandler:
             return ""
 
     def _manage_slot_state(self, action: SlotAction, filename: str = "", slot_id: int = 0):
-        if action == LlamaServerHandler.SlotAction.SAVE and filename == "":
+        if action == SlotAction.SAVE and filename == "":
             logger.error("You need to provide a file to store a model state to.")
             return
-        if action == LlamaServerHandler.SlotAction.RESTORE and filename == "":
+        if action == SlotAction.RESTORE and filename == "":
             logger.error("You need to provide a file to restore a model state from.")
             return
-        if action == LlamaServerHandler.SlotAction.ERASE and filename != "":
+        if action == SlotAction.ERASE and filename != "":
             logger.warning(
                 "You provided a file for model state, ignored for erasing the slot memory!"
             )
@@ -201,7 +218,7 @@ class LlamaServerHandler:
         url = f"{self.url}/slots/{slot_id}?action={action.value}"
         kwargs = {}
         kwargs["headers"] = {"Content-Type": "application/json"}
-        if action != LlamaServerHandler.SlotAction.ERASE:
+        if action != SlotAction.ERASE:
             kwargs["data"] = json.dumps(
                 {
                     "filename": filename,
@@ -220,23 +237,21 @@ class LlamaServerHandler:
         except requests.RequestException as e:
             logger.error(f"Error querying Llama server: {e}")
 
-    def store_state(self, messages: list[dict], filename: str):
+    @_run_with_server
+    def store_state(self, messages: Messages, filename: str):
         statefile = Path(self._checkpoint_dir) / filename
         statefile.parent.mkdir(parents=True, exist_ok=True)
         statefile.unlink(missing_ok=True)
         statefile.touch()
-        with self:
-            self.chat_llm(messages, cache_prompt=True)
-            self._manage_slot_state(
-                LlamaServerHandler.SlotAction.SAVE, slot_id=0, filename=filename
-            )
 
-    def chat_from_state(self, messages: list[dict], filename: str) -> str:
-        with self:
-            self._manage_slot_state(
-                LlamaServerHandler.SlotAction.RESTORE, slot_id=0, filename=filename
-            )
-            response = self.chat_llm(messages, cache_prompt=True)
+        self._manage_slot_state(SlotAction.ERASE, slot_id=0)
+        self.chat_llm(messages, cache_prompt=True)
+        self._manage_slot_state(SlotAction.SAVE, slot_id=0, filename=filename)
+
+    @_run_with_server
+    def chat_from_state(self, messages: Messages, filename: str) -> str:
+        self._manage_slot_state(SlotAction.RESTORE, slot_id=0, filename=filename)
+        response = self.chat_llm(messages, cache_prompt=True)
 
         return response
 
@@ -244,79 +259,3 @@ class LlamaServerHandler:
     def from_config(cls) -> Self:
         modelpath = config.conf.select("model.file_path", default=None)
         return cls(modelpath)
-
-
-@dataclass
-class LocalDragtor:
-    """Manage user requests by including context information and feeding them to LLMs."""
-
-    # TODO: figure out an interface for managing cache files in the LlamaServerHandler
-
-    llm: LlamaServerHandler = field(default_factory=LlamaServerHandler.from_config)
-    user_prompt_template: str = config.conf.select("prompts.user_template")
-    index: Index = field(default_factory=get_index)
-    _questions: deque = field(init=False, default_factory=deque)
-    _answers: deque = field(init=False, default_factory=deque)
-
-    @property
-    def system_prompt(self) -> str:
-        return config.conf.select("prompts.system", "")
-
-    def answer(self, question: str, **kwargs) -> str:
-        """Generate an answer to the question, using the available knowledge.
-
-        Use chunks from RAG retrieval as context."""
-        context = self._get_context(question)
-        prompt = self._expand_user_prompt(question, context)
-        with self.llm:
-            result = self.llm.query_llm(prompt, **kwargs)
-
-        return result
-
-    def _get_context(self, question: str, retrieve_chunks: bool = True) -> str:
-        if retrieve_chunks:
-            return "\n".join(self.index.query(question))
-
-        return ""
-
-    def _expand_user_prompt(self, question: str, context: str, is_chat: bool = False) -> str:
-        """Infuse a question of the user with context"""
-        prompt = self.user_prompt_template.format(context=context, question=question)
-        logger.debug(f"built final prompt:\n{prompt}")
-        if not is_chat and len(self.system_prompt) > 0:
-            prompt = "\n\n".join([self.system_prompt, prompt])
-        return prompt
-
-    def _to_messages(self, question: str, context: str) -> list[dict]:
-        first_prompt = self._expand_user_prompt(question, context, is_chat=True)
-        messages = [
-            {
-                "role": "system",
-                "content": self.system_prompt,
-            },
-            {
-                "role": "user",
-                "content": first_prompt,
-            },
-        ]
-        return messages
-
-    def chat(self, question: str, contextfile: str = "", **kwargs) -> str:
-        """Generate an answer to the question via the chat interface.
-
-        Use available knowledge via RAG approach.
-        """
-        if contextfile == "":
-            context = self._get_context(question)
-            messages = self._to_messages(question, context)
-            with self.llm:
-                result = self.llm.chat_llm(messages, **kwargs)
-        else:
-            context = Path(contextfile).resolve().read_text()
-            context_id = hashlib.md5(context.encode("utf-8")).hexdigest()
-            statefile = f"{context_id}.bin"
-            messages = self._to_messages(question, context)
-            result = self.llm.chat_from_state(messages, statefile, **kwargs)
-        logger.debug("finished llm chat completion")
-
-        return result

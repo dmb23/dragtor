@@ -3,8 +3,8 @@ from os.path import isfile
 import pytest
 import subprocess
 from pathlib import Path
-from dragtor.utils.audio_utils import preprocess_audio_file
-from dragtor.audio_loader import AudioLoader
+from dragtor.audio.audio_utils import preprocess_audio_file
+from dragtor.audio.audio_loader import AudioLoader
 from unittest import mock
 
 # Sample paths to test
