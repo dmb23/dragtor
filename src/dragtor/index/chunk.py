@@ -77,8 +77,8 @@ class LangchainChunker(Chunker):
 
         recursive_text_splitter = RecursiveCharacterTextSplitter(
             # Follow config's max chunk length
-            chunk_size=config.conf.select("chunker.jina_tokenizer.max_chunk_length", 1000),
-            chunk_overlap=20,  # Test with overlap first
+            chunk_size=config.conf.select("chunker.langchain_tokenizer.max_chunk_length", 1000),
+            chunk_overlap=0,
             length_function=len,
             is_separator_regex=False,
         )

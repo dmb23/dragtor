@@ -19,6 +19,8 @@ chunking:
   strategy: langchain
   jina_tokenizer:
     max_chunk_length: 1000
+  langchain_tokenizer:
+    max_chunk_length: 1000
 embeddings:
   # valid strategies: chromadb [default], jina
   strategy: jina
