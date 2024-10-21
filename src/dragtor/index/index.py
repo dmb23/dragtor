@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass
-import hashlib
 from typing import Self
 
 from loguru import logger
@@ -12,6 +11,7 @@ from dragtor.index import RetrievalError
 from dragtor.index.chunk import Chunker, get_chunker
 from dragtor.index.rerank import Reranker, get_reranker
 from dragtor.index.store import ChromaDBStore, get_store
+from dragtor.utils import ident
 
 
 @dataclass
@@ -80,7 +80,7 @@ class LateChunkingIndex(Index):
         for text in texts:
             chunks, _ = self.chunker.chunk_and_annotate(text)
             embeddings = self._calculate_late_embeddings_v2(text)
-            ids = [hashlib.md5(chunk.encode("utf-8")).hexdigest() for chunk in chunks]
+            ids = [ident(chunk) for chunk in chunks]
 
             all_chunks.extend(chunks)
             all_ids.extend(ids)
