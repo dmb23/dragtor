@@ -8,7 +8,7 @@ from dragtor import config, data
 from dragtor.index.index import get_index
 from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor
-from dragtor.llm.eval import QuestionEvaluator
+from dragtor.llm.evaluation import EvaluationSuite, QuestionEvaluator
 from dragtor.utils import ident
 
 
@@ -78,24 +78,28 @@ class Cli:
         """Get an answer to your question based on the content of a file from the index cache"""
         return LocalDragtor().chat(question, statefile)
 
-    @logger.catch
-    def transform(self):
-        """Create additional features from available sources.
+    # @logger.catch
+    # def transform(self):
+    #     """Create additional features from available sources.
+    #
+    #     - extract topics per source
+    #     - create summaries per topic
+    #     - create question / answer pairs for each topic
+    #     """
+    #     raise NotImplementedError
 
-        - extract topics per source
-        - create summaries per topic
-        - create question / answer pairs for each topic
-        """
-        raise NotImplementedError
-
-    def eval(self, question: str):
+    def eval(self, question: str = ""):
         """Evaluate the performance of the configured RAG setup.
 
         - evaluate how many of the propositions in a given answer are based on the sources.
         - possibly: evaluate answers to reference questions against gold truths
         """
-        evaluator = QuestionEvaluator(question=question)
-        evaluator.run_eval()
+        if question:
+            evaluator = QuestionEvaluator(question=question)
+            evaluator.run_eval()
+        else:
+            evaluator = EvaluationSuite()
+            evaluator.run_all_evals()
 
 
 def entrypoint():

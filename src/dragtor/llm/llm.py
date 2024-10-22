@@ -138,6 +138,7 @@ class LlamaServerHandler:
         @functools.wraps(func)
         def wrapper_decorator(self, *args, **kwargs):
             state = self._check_for_server()
+            logger.debug(f"Checking Server state before executing command: {state.name}")
             match state:
                 case ServerState.UP:
                     # server is running externally

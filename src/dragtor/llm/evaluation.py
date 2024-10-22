@@ -1,10 +1,11 @@
-from dataclasses import dataclass, field
+from datetime import datetime
 from enum import Enum
+from functools import cached_property
 import json
 from pathlib import Path
 
 from loguru import logger
-from pydantic import BaseModel
+from pydantic import BaseModel, PrivateAttr, computed_field
 
 from dragtor import config
 from dragtor.llm import LlamaServerHandler
@@ -91,6 +92,7 @@ def _get_propositions(text: str) -> Propositions:
 
     prompt taken from [langchain](https://github.com/langchain-ai/langchain/blob/master/templates/propositional-retrieval/propositional_retrieval/proposal_chain.py)
     """
+    logger.info("Calculating Propositions from statement")
     sys_prompt = """
     Decompose the "Content" into clear and simple propositions, ensuring they are interpretable out of context.
     1. Split compound sentence into simple sentences. Maintain the original phrasing from the input whenever possible.
@@ -132,8 +134,6 @@ def _get_propositions(text: str) -> Propositions:
     messages.assistant(ex_out)
     messages.user(user_prompt_template.format(content=text))
 
-    logger.info(f'decomposing section " {text[:40]} [...] {text[-40:]}"')
-
     answer = lsh.chat_llm(
         messages,
         cache_prompt=True,
@@ -154,6 +154,7 @@ def _get_faithfullness(answer: str, context: str) -> EvalFaithful:
 
     Taken mostly from [Ragas](https://github.com/explodinggradients/ragas/blob/main/src/ragas/metrics/_faithfulness.py).
     """
+    logger.info("Calculating Answer Faithfulness")
     props = _get_propositions(answer)
 
     def _format_user_message(statements: list[str], context: str) -> str:
@@ -226,10 +227,9 @@ def _get_answer_correctness(model_answer: str, gold_answer: str) -> EvalAnswerCo
 
     Following mostly concepts from [Ragas](https://github.com/explodinggradients/ragas/blob/main/src/ragas/metrics/_answer_correctness.py)
     """
+    logger.debug("Calculating Answer Correctness")
     props_model_answer = _get_propositions(model_answer)
-    logger.debug(f"{props_model_answer=}")
     props_gold_answer = _get_propositions(gold_answer)
-    logger.debug(f"{props_gold_answer=}")
 
     sys_prompt = """
     Given a ground truth and statements from an answer, analyze each statement and classify them in one of the following categories:
@@ -266,7 +266,6 @@ def _get_answer_correctness(model_answer: str, gold_answer: str) -> EvalAnswerCo
     user_message = user_prompt_template.format(
         ground_truth=props_gold_answer, answer=props_model_answer
     )
-    logger.debug(f"{user_message=}")
     messages.user(user_message)
 
     res = lsh.chat_llm(
@@ -277,8 +276,6 @@ def _get_answer_correctness(model_answer: str, gold_answer: str) -> EvalAnswerCo
     )
     answer_correctness = AnswerCorrectness.model_validate_json(res)
 
-    logger.info(answer_correctness)
-
     eval = EvalAnswerCorrectness(
         tp=[s for s in answer_correctness.statements if s.classification.value == "TP"],
         fp=[s for s in answer_correctness.statements if s.classification.value == "FP"],
@@ -288,40 +285,94 @@ def _get_answer_correctness(model_answer: str, gold_answer: str) -> EvalAnswerCo
     return eval
 
 
-@dataclass
-class QuestionEvaluator:
+class QuestionEvaluator(BaseModel):
     question: str
-    faithfullness: EvalFaithful | None = field(init=False, default=None)
-    correctness: EvalAnswerCorrectness | None = field(init=False, default=None)
-    _context: str = field(init=False)
-    _answer: str = field(init=False)
-    _dragtor: LocalDragtor = field(init=False)
-    _gold_truth: str | None = field(init=False, default=None)
+    _dragtor: LocalDragtor = PrivateAttr(default_factory=LocalDragtor)
 
-    def __post_init__(self):
-        logger.info("Loading context and answer for evaluation")
-        self._dragtor = LocalDragtor()
+    @computed_field
+    @cached_property
+    def context(self) -> str:
+        _context = self._dragtor._get_context(self.question)
+        logger.info(f'Using context "{_context}"')
+        return _context
 
-        # get context
-        self._context = self._dragtor._get_context(self.question)
+    @computed_field
+    @cached_property
+    def answer(self) -> str:
+        _answer = self._dragtor.chat(self.question)
+        logger.info(f'Using answer "{_answer}"')
+        return _answer
 
-        # get answer
-        self._answer = self._dragtor.chat(self.question)
-
+    @computed_field
+    @property
+    def gold_truth(self) -> str:
         # check for available gold_truth
         gold_truth_file = (
             Path(config.conf.base_path) / config.conf.eval.eval_dir / config.conf.eval.eval_answers
         )
         if gold_truth_file.exists() and gold_truth_file.is_file():
             gold_answers = json.loads(gold_truth_file.read_text())
-            self._gold_truth = gold_answers.get(self.question, None)
+            logger.info(f'Using gold truth answer "{gold_answers.get(self.question, "")}"')
+            return gold_answers.get(self.question, "")
+        return ""
+
+    @computed_field
+    @cached_property
+    def faithfullness(self) -> EvalFaithful:
+        logger.info(f'Calculating Faithfullness for question "{self.question}"')
+        return _get_faithfullness(self.answer, self.context)
+
+    @computed_field
+    @cached_property
+    def correctness(self) -> EvalAnswerCorrectness | None:
+        if self.gold_truth:
+            logger.info(f'Calculating Correctness for question "{self.question}"')
+            return _get_answer_correctness(self.answer, self.gold_truth)
+        return None
 
     def run_eval(self):
         logger.info("Evaluating how faithfull the answer is to the context")
-        self.faithfullness = _get_faithfullness(self._answer, self._context)
         logger.info(f"Faithfulness: {self.faithfullness.fraction_true():.0%}")
 
-        if self._gold_truth:
+        if self.correctness:
             logger.info('Evaluating how close the answer is to the "golden" reference')
-            self.correctness = _get_answer_correctness(self._answer, self._gold_truth)
             logger.info(f"Correctness: {self.correctness.f1_score():.0%}")
+
+
+class EvaluationSuite(BaseModel):
+    @computed_field
+    @property
+    def gold_answers(self) -> dict[str, str]:
+        gold_truth_file = (
+            Path(config.conf.base_path) / config.conf.eval.eval_dir / config.conf.eval.eval_answers
+        )
+        if not gold_truth_file.is_file():
+            logger.warning(
+                f"Can't evaluate RAG performance: Expected reference questions and answers at {gold_truth_file}"
+            )
+        return json.loads(gold_truth_file.read_text())
+
+    @computed_field
+    @property
+    def questions(self) -> list[str]:
+        return list(self.gold_answers.keys())
+
+    @computed_field
+    @cached_property
+    def evaluations(self) -> dict[str, QuestionEvaluator]:
+        _dragtor = LocalDragtor()
+        return {
+            question: QuestionEvaluator(question=question, dragtor=_dragtor)
+            for question in self.questions
+        }
+
+    def run_all_evals(self):
+        logger.info(f"Evaluating {len(self.questions)} questions")
+        for i, question in enumerate(self.questions):
+            logger.info(f"Evaluating Question {i+1}: {question}")
+            self.evaluations[question].run_eval()
+
+        eval_file = (
+            Path(config.conf.base_path) / config.conf.eval.eval_dir / f"{datetime.now()}_eval.json"
+        )
+        eval_file.write_text(self.model_dump_json())

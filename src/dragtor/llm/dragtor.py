@@ -46,7 +46,6 @@ class LocalDragtor:
     def _expand_user_prompt(self, question: str, context: str, is_chat: bool = False) -> str:
         """Infuse a question of the user with context"""
         prompt = self.user_prompt_template.format(context=context, question=question)
-        logger.debug(f"built final prompt:\n{prompt}")
         if not is_chat and len(self.system_prompt) > 0:
             prompt = "\n\n".join([self.system_prompt, prompt])
         return prompt
