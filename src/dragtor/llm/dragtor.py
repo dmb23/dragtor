@@ -32,8 +32,7 @@ class LocalDragtor:
         Use chunks from RAG retrieval as context."""
         context = self._get_context(question)
         prompt = self._expand_user_prompt(question, context)
-        with self.llm:
-            result = self.llm.query_llm(prompt, **kwargs)
+        result = self.llm.query_llm(prompt, **kwargs)
 
         return result
 
@@ -65,8 +64,7 @@ class LocalDragtor:
         if contextfile == "":
             context = self._get_context(question)
             messages = self._to_messages(question, context)
-            with self.llm:
-                result = self.llm.chat_llm(messages, **kwargs)
+            result = self.llm.chat_llm(messages, **kwargs)
         else:
             context = Path(contextfile).resolve().read_text()
             context_id = ident(context)
