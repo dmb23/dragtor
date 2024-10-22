@@ -92,7 +92,7 @@ def _get_propositions(text: str) -> Propositions:
 
     prompt taken from [langchain](https://github.com/langchain-ai/langchain/blob/master/templates/propositional-retrieval/propositional_retrieval/proposal_chain.py)
     """
-    logger.info("Calculating Propositions from statement")
+    logger.debug("Calculating Propositions from statement")
     sys_prompt = """
     Decompose the "Content" into clear and simple propositions, ensuring they are interpretable out of context.
     1. Split compound sentence into simple sentences. Maintain the original phrasing from the input whenever possible.
@@ -154,7 +154,7 @@ def _get_faithfullness(answer: str, context: str) -> EvalFaithful:
 
     Taken mostly from [Ragas](https://github.com/explodinggradients/ragas/blob/main/src/ragas/metrics/_faithfulness.py).
     """
-    logger.info("Calculating Answer Faithfulness")
+    logger.debug("Calculating Answer Faithfulness")
     props = _get_propositions(answer)
 
     def _format_user_message(statements: list[str], context: str) -> str:
@@ -341,7 +341,7 @@ class QuestionEvaluator(BaseModel):
 
 class EvaluationSuite(BaseModel):
     @computed_field
-    @property
+    @cached_property
     def gold_answers(self) -> dict[str, str]:
         gold_truth_file = (
             Path(config.conf.base_path) / config.conf.eval.eval_dir / config.conf.eval.eval_answers
@@ -353,7 +353,7 @@ class EvaluationSuite(BaseModel):
         return json.loads(gold_truth_file.read_text())
 
     @computed_field
-    @property
+    @cached_property
     def questions(self) -> list[str]:
         return list(self.gold_answers.keys())
 
@@ -362,7 +362,7 @@ class EvaluationSuite(BaseModel):
     def evaluations(self) -> dict[str, QuestionEvaluator]:
         _dragtor = LocalDragtor()
         return {
-            question: QuestionEvaluator(question=question, dragtor=_dragtor)
+            question: QuestionEvaluator(question=question, _dragtor=_dragtor)
             for question in self.questions
         }
 
@@ -376,3 +376,16 @@ class EvaluationSuite(BaseModel):
             Path(config.conf.base_path) / config.conf.eval.eval_dir / f"{datetime.now()}_eval.json"
         )
         eval_file.write_text(self.model_dump_json())
+        logger.info("Final Evaluations:")
+        for i, question in enumerate(self.questions):
+            logger.info(f"Question {i+1}:")
+            logger.info(
+                f"Faithfulness: {self.evaluations[question].faithfullness.fraction_true():.0%}"
+            )
+            if self.evaluations[question].correctness:
+                logger.info(f"Correctness: {self.evaluations[question].correctness.f1_score():.2f}")
+
+    @classmethod
+    def summarize_dump(cls, filepath: Path):
+        res = json.loads(filepath.read_text())
+        # TODO: re-calculate metrics from dumped values
