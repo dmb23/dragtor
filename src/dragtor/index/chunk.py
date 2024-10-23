@@ -96,7 +96,7 @@ class LangchainChunker(Chunker):
             )
 
             # Update start_position value to end position, with excluding overlap
-            start_position = end_position - recursive_text_splitter._chunk_overlap
+            start_position = end_position + 1 - recursive_text_splitter._chunk_overlap
 
         return chunks, annotations
 

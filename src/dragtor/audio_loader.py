@@ -60,7 +60,7 @@ class AudioLoader:
         """Get all previously cached audio transcript that was loaded to file"""
         full_texts = []
         for fpath in self.outdir.glob("*.txt"):
-            logger.warning(fpath)
+            logger.info(f"loading cached file {fpath}")
             full_texts.append(fpath.read_text(encoding="utf8"))
 
         return full_texts
