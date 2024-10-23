@@ -69,7 +69,6 @@ prompts:
     answer:
 server:
   backoff: 1.0
-
 audio:
   model: "/Users/mischa/Projects/local/dragtor/models/ggml-base.en.bin"
   files: "/Users/mischa/Projects/local/dragtor/data/audio_files/"
