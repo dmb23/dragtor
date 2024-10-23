@@ -43,7 +43,7 @@ class AudioLoader:
             # Check whether the provided URL is valid
             if url.startswith(("http://", "https://")):
                 try:
-                    response = requests.get(url)
+                    response = requests.get(url, timeout=10)
                     response.raise_for_status()
                 except RequestException as e:
                     logger.error(f"{url} is not a valid URL")
@@ -66,7 +66,7 @@ class AudioLoader:
         return full_texts
 
 
-    def _transcribe_to_file(self, audio_path: str) -> None:
+    def _transcribe_to_file(self, audio_path: str) -> bool:
         """
         Transcribe the audio file or URL provided in the config file and save it to a file.
 
@@ -76,14 +76,16 @@ class AudioLoader:
         Returns:
             None: This function does not return any value. The transcription is saved as a file.
         """
+        logger.info(f"Starting transcription for {audio_path}")
+
         # Set the output file name by extracting the last two parts and set file extension as txt
-        file_name = "_".join(audio_path.split("/")[-2:])
+        file_name = self._clean_filename("_".join(audio_path.split("/")[-2:]))
         output_file = self.outdir / f"{file_name.rsplit('.', 1)[0]}.txt"
 
         # If the same URL/audio file has been transcribed, it will read from existing transcription
         if output_file.exists():
             logger.info(f"Already cached {audio_path}")
-            return
+            return True
 
         if audio_path.startswith(("http://", "https://")):
             with self._download_audio_file(audio_path=audio_path) as temp_file:
@@ -97,11 +99,10 @@ class AudioLoader:
                 transcript = self._transcribe_audio(wav_file=wav_file)
                 self._save_transcript(transcript, output_file)
 
+        logger.info(f"Completed transcription for {audio_path}")
 
     def _download_audio_file(self, audio_path: str):
         """Download audio file from URL and return a tempfile."""
-        logger.info(f"Processing: {audio_path}")
-
         inputs = requests.get(audio_path).content
         temp_file = tempfile.NamedTemporaryFile(delete=True, dir=config.conf.base_path)
         temp_file.write(inputs)
@@ -123,12 +124,14 @@ class AudioLoader:
             return wav_file
         return input_file
 
+
     def _transcribe_audio(self, wav_file) -> str:
         """Transcribe .wav audio file using transcription model."""
-        logger.info(f"Transcribing {wav_file}")
         command = f"transcribe -m '{self.model_path}' -f '{str(wav_file)}' -l '{self.language}'"
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, error = process.communicate()
+        if process.returncode != 0:
+            raise RuntimeError(f"Transcription process failed for {wav_file}")
 
         decoded_str = output.decode('utf-8').strip()
         processed_str = decoded_str.replace('[BLANK_AUDIO]', '').strip()
@@ -156,3 +159,7 @@ class AudioLoader:
 
         return transcript_segments
 
+
+    def _clean_filename(self, name: str) -> str:
+        """Cleans file name to remove illegal characters."""
+        return re.sub(r'[<>:"/\\|?*]', "_", name)

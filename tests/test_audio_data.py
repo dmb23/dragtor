@@ -1,87 +1,63 @@
-from os.path import isfile
-
 import pytest
 import subprocess
+import shutil
+
 from pathlib import Path
-from dragtor.utils.audio_utils import preprocess_audio_file
 from dragtor.audio_loader import AudioLoader
-from unittest import mock
+from dragtor import config
 
-# Sample paths to test
 project_root = Path(__file__).parent.parent
-local_audio_file = project_root / "tests" / "assets" / "audio_files" / "sample2.flac"
-transcript_file = project_root / "tests" / "assets" / "audio_transcript" / "sample2.txt"
+local_audio_sample = project_root / "tests" / "assets" / "audio_sample" / "sample.wav"
+local_invalid_audio_sample = project_root / "tests" / "assets" / "audio_sample" / "sample99.mp3"
 
-# Mock the response for requests.get to avoid real HTTP calls
-@pytest.fixture
-def mock_request_get(monkeypatch):
-    def mock_get(*args, **kwargs):
-        class MockResponse:
-            def __init__(self):
-                self.content = f"fake_audio_content"
-
-            def raise_for_status(self):
-                pass
-        return MockResponse()
-
-    monkeypatch.setattr("requests.get", mock_get)
-
-# Mock the subprocess call to ffmpeg to avoid real processing
-@pytest.fixture
-def mock_subprocess_run(monkeypatch):
-    def mock_run(*args, **kwargs):
-        return mock.Mock()
-
-    monkeypatch.setattr("subprocess.run", mock_run)
-
-# Test for preprocess_audio_file function with a URL
-def test_preprocess_audio_file(mock_request_get, mock_subprocess_run):
-    result = preprocess_audio_file(str(local_audio_file))
-
-    assert isinstance(result, Path)
-    assert result.suffix == ".wav"
-
+def test_ffmpeg_availability():
+    """Test if your local machine already installed with ffmpeg."""
+    try:
+        result = subprocess.run(["ffmpeg", "-version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        assert result.returncode == 0
+    except FileNotFoundError:
+        pytest.fail("ffmpeg is not installed or not available in the system's PATH")
 
 @pytest.fixture
-def mock_subprocess_popen(monkeypatch):
-    class MockPopen:
-        def __init__(self, *args, **kwargs):
-            self.stdout = b""  # Simulated stdout result
-            self.stderr = b""  # Simulated no error
+def setup_audio_loader():
+    audio_loader = AudioLoader(outdir=Path(config.conf.base_path) / config.conf.data.audio_cache)
+    yield audio_loader
 
-        def communicate(self):
-            transcript_sample = """
-            [00:03:30.840 --> 00:03:36.720]   A lot of people have injuries and niggles and things that they're confused about and I think we got
-            [00:03:36.720 --> 00:03:42.520]   a lot of great questions that I think will lead into hopefully kind of more global helpful
-            [00:03:42.520 --> 00:03:47.120]   takeaways for how to prevent these injuries, how to deal with things like lumbricle injuries
-            [00:03:47.120 --> 00:03:53.280]   or cinnavitis or capsulitis or hypermobile fingers and how you train if you have super
-            [00:03:53.280 --> 00:03:58.560]   mobile fingers and then like injury prevention for fingers and how to promote finger health
-            [00:03:58.560 --> 00:04:04.000]   for all of us for aging climbers, etc so yeah, I'm really looking forward to it but as a
-            [00:04:04.000 --> 00:04:10.480]   way to kick things off, tell me a little bit about your background.
-            """
-            self.stdout = transcript_sample.encode("utf-8")
-            return self.stdout, self.stderr  # Return stdout and stderr as tuple
+@pytest.mark.parametrize(
+    "test_url, expected_output",
+    [
+        ("https://cdn-media.huggingface.co/speech_samples/sample2.flac", True),
+        (str(local_audio_sample), True),
+        ("https://cdn-media.huggingface.co/speech_samples/samplex.flac", False),
+        (str(local_invalid_audio_sample), False),
+    ]
+)
+def test_transcribe_to_file(setup_audio_loader, test_url, expected_output):
+    audio_loader = setup_audio_loader
 
-        def wait(self):
-            return None
+    # Run main function of AudioLoader for each URL
+    audio_loader.load_audio_to_cache(test_url)
 
-        # Add context manager methods
-        def __enter__(self):
-            return self
+    # Check if the transcription is created & match the file name logic
+    file_name = "_".join(test_url.split("/")[-2:])
+    output_file = Path(audio_loader.outdir) / f"{file_name.rsplit('.', 1)[0]}.txt"
 
-        def __exit__(self, exc_type, exc_val, exc_tb):
-            pass
+    if expected_output:
+        # Running using correct URL
+        assert output_file.exists()
+        assert output_file.read_text().startswith("And before he had time") == True
+    else:
+        # Running using incorrect URL
+        assert not output_file.exists()
 
-    # Mock the Popen object within subprocess
-    monkeypatch.setattr(subprocess, "Popen", MockPopen)
+def test_get_audio_cache(setup_audio_loader):
+    """Test for transcript retrievals."""
+    audio_loader = setup_audio_loader
 
-# Test the transcribe_to_file method in PodcastLoader with mocked Popen
-def test_transcribe_to_file_method(mock_request_get, mock_subprocess_run, mock_subprocess_popen):
-    loader = AudioLoader()
+    audio_full_texts = audio_loader.get_audio_cache()
 
-    # Call the method using a valid local audio file path
-    loader.transcribe_to_file(str(local_audio_file))
+    assert len(audio_full_texts) == 2
+    assert audio_full_texts[0].startswith("And before he had time") == True
+    assert audio_full_texts[1].startswith("And before he had time") == True
 
-    # Assertions
-    assert isfile(transcript_file)
-    # TODO: Add new assertion to check the file's content
+    shutil.rmtree(audio_loader.outdir)
