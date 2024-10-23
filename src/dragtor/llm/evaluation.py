@@ -1,11 +1,10 @@
 from datetime import datetime
 from enum import Enum
-from functools import cached_property
 import json
 from pathlib import Path
 
 from loguru import logger
-from pydantic import BaseModel, PrivateAttr, computed_field
+from pydantic import BaseModel, Field, PrivateAttr, computed_field
 
 from dragtor import config
 from dragtor.llm import LlamaServerHandler
@@ -287,105 +286,110 @@ def _get_answer_correctness(model_answer: str, gold_answer: str) -> EvalAnswerCo
 
 class QuestionEvaluator(BaseModel):
     question: str
-    _dragtor: LocalDragtor = PrivateAttr(default_factory=LocalDragtor)
+    context: str = ""
+    answer: str = ""
+    gold_truth: str = ""
+    faithfullness: EvalFaithful | None = None
+    correctness: EvalAnswerCorrectness | None = None
+    _dragtor: LocalDragtor = PrivateAttr()
 
-    @computed_field
-    @cached_property
-    def context(self) -> str:
-        _context = self._dragtor._get_context(self.question)
-        logger.info(f'Using context "{_context}"')
-        return _context
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        if "_dragtor" in kwargs:
+            if not isinstance(kwargs["_dragtor"], LocalDragtor):
+                logger.warning("wrong type for argument `_dragtor`")
+            self._dragtor = kwargs["_dragtor"]
+        else:
+            self._dragtor = LocalDragtor()
 
-    @computed_field
-    @cached_property
-    def answer(self) -> str:
-        _answer = self._dragtor.chat(self.question)
-        logger.info(f'Using answer "{_answer}"')
-        return _answer
+        if self.context == "":
+            self.context = self._dragtor._get_context(self.question)
+            logger.info(f'Using context "{self.context}"')
 
-    @computed_field
-    @property
-    def gold_truth(self) -> str:
-        # check for available gold_truth
-        gold_truth_file = (
-            Path(config.conf.base_path) / config.conf.eval.eval_dir / config.conf.eval.eval_answers
-        )
-        if gold_truth_file.exists() and gold_truth_file.is_file():
-            gold_answers = json.loads(gold_truth_file.read_text())
-            logger.info(f'Using gold truth answer "{gold_answers.get(self.question, "")}"')
-            return gold_answers.get(self.question, "")
-        return ""
+        if self.answer == "":
+            self.answer = self._dragtor.chat(self.question)
+            logger.info(f'Using answer "{self.answer}"')
 
-    @computed_field
-    @cached_property
-    def faithfullness(self) -> EvalFaithful:
-        logger.info(f'Calculating Faithfullness for question "{self.question}"')
-        return _get_faithfullness(self.answer, self.context)
+        if self.gold_truth == "":
+            gold_truth_file = (
+                Path(config.conf.base_path)
+                / config.conf.eval.eval_dir
+                / config.conf.eval.eval_answers
+            )
+            if gold_truth_file.exists() and gold_truth_file.is_file():
+                gold_answers = json.loads(gold_truth_file.read_text())
+                logger.info(f'Using gold truth answer "{gold_answers.get(self.question, "")}"')
+                self.gold_truth = gold_answers.get(self.question, "")
+            self.gold_truth = ""
 
-    @computed_field
-    @cached_property
-    def correctness(self) -> EvalAnswerCorrectness | None:
-        if self.gold_truth:
+        if self.faithfullness is None:
+            logger.info(f'Calculating Faithfullness for question "{self.question}"')
+            self.faithfullness = _get_faithfullness(self.answer, self.context)
+
+        if (self.correctness is None) and self.gold_truth:
             logger.info(f'Calculating Correctness for question "{self.question}"')
-            return _get_answer_correctness(self.answer, self.gold_truth)
-        return None
+            self.correctness = _get_answer_correctness(self.answer, self.gold_truth)
 
-    def run_eval(self):
-        logger.info("Evaluating how faithfull the answer is to the context")
-        logger.info(f"Faithfulness: {self.faithfullness.fraction_true():.0%}")
-
+    def show_eval(self):
+        if self.faithfullness:
+            logger.info("Evaluating how faithfull the answer is to the context")
+            logger.info(f"Faithfulness: {self.faithfullness.fraction_true():.0%}")
         if self.correctness:
             logger.info('Evaluating how close the answer is to the "golden" reference')
             logger.info(f"Correctness: {self.correctness.f1_score():.0%}")
+        if (self.faithfullness is None) and (self.correctness is None):
+            logger.warning("No evaluation present to evaluate! Something went wrong?")
 
 
 class EvaluationSuite(BaseModel):
-    @computed_field
-    @cached_property
-    def gold_answers(self) -> dict[str, str]:
-        gold_truth_file = (
-            Path(config.conf.base_path) / config.conf.eval.eval_dir / config.conf.eval.eval_answers
-        )
-        if not gold_truth_file.is_file():
-            logger.warning(
-                f"Can't evaluate RAG performance: Expected reference questions and answers at {gold_truth_file}"
+    gold_answers: dict[str, str] = Field(default_factory=dict)
+    evaluations: dict[str, QuestionEvaluator] = Field(default_factory=dict)
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        if self.gold_answers is None:
+            gold_truth_file = (
+                Path(config.conf.base_path)
+                / config.conf.eval.eval_dir
+                / config.conf.eval.eval_answers
             )
-        return json.loads(gold_truth_file.read_text())
+            if not gold_truth_file.is_file():
+                logger.warning(
+                    f"Can't evaluate RAG performance: Expected reference questions and answers at {gold_truth_file}"
+                )
+            self.gold_answers = json.loads(gold_truth_file.read_text())
+
+        if self.evaluations is None:
+            dragtor = LocalDragtor()
+            self.evaluations = {
+                question: QuestionEvaluator(question=question, _dragtor=dragtor)
+                for question in self.questions
+            }
 
     @computed_field
-    @cached_property
+    @property
     def questions(self) -> list[str]:
-        return list(self.gold_answers.keys())
-
-    @computed_field
-    @cached_property
-    def evaluations(self) -> dict[str, QuestionEvaluator]:
-        _dragtor = LocalDragtor()
-        return {
-            question: QuestionEvaluator(question=question, _dragtor=_dragtor)
-            for question in self.questions
-        }
+        return list(self.gold_answers.keys()) if self.gold_answers else []
 
     def run_all_evals(self):
-        logger.info(f"Evaluating {len(self.questions)} questions")
-        for i, question in enumerate(self.questions):
+        if self.evaluations is None:
+            logger.info("No questions to evaluate")
+            return
+        logger.info(f"Evaluating {len(self.evaluations)} questions")
+        for i, (question, evaluation) in enumerate(self.evaluations.items()):
             logger.info(f"Evaluating Question {i+1}: {question}")
-            self.evaluations[question].run_eval()
+            evaluation.show_eval()
 
         eval_file = (
             Path(config.conf.base_path) / config.conf.eval.eval_dir / f"{datetime.now()}_eval.json"
         )
         eval_file.write_text(self.model_dump_json())
-        logger.info("Final Evaluations:")
-        for i, question in enumerate(self.questions):
-            logger.info(f"Question {i+1}:")
-            logger.info(
-                f"Faithfulness: {self.evaluations[question].faithfullness.fraction_true():.0%}"
-            )
-            if self.evaluations[question].correctness:
-                logger.info(f"Correctness: {self.evaluations[question].correctness.f1_score():.2f}")
 
-    @classmethod
-    def summarize_dump(cls, filepath: Path):
-        res = json.loads(filepath.read_text())
-        # TODO: re-calculate metrics from dumped values
+        logger.info("Final Evaluations:")
+        for i, (question, evaluation) in enumerate(self.evaluations.items()):
+            logger.info(f"Question {i+1}:")
+            if evaluation.faithfullness:
+                logger.info(f"Faithfulness: {evaluation.faithfullness.fraction_true():.0%}")
+            if evaluation.correctness:
+                logger.info(f"Correctness: {evaluation.correctness.f1_score():.2f}")
