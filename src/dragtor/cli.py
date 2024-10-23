@@ -32,8 +32,7 @@ class Cli:
 
         audio_urls = config.conf.data.audio_urls
         logger.debug(f"loading audio urls:\n{audio_urls}")
-        for audio_url in audio_urls:
-            audio_loader.AudioLoader().transcribe_to_file(audio_url, diarize=False)
+        audio_loader.AudioLoader().load_audio_to_cache(urls=audio_urls)
         logger.info("Loaded audio data successfully")
 
     def clear_index(self):

@@ -1,9 +1,9 @@
-from dragtor.utils.audio_utils import preprocess_audio_file, parse_transcript, cleanup
-from dragtor.utils.audio_diarization_utils import audio_diarize, parse_audio_transcript, parse_diarization, align_transcription_with_speakers
-
-import json
 import subprocess
+import tempfile
 import requests
+import re
+
+from typing import Iterable
 from pathlib import Path
 from loguru import logger
 from requests.exceptions import RequestException
@@ -19,86 +19,42 @@ class AudioLoader:
         outdir (str): Output path where the results are stored. Defaults to base_path/data.audio_cache under config.
 
     Methods
-        transcribe_to_file(audio_path): Transcribes the audio and saves the result to a file. Set diarize=True to use diarization functionality.
+        load_audio_to_cache(audio_paths): Transcribes the audio URLs listed in config file and saves the result to a file.
+        get_audio_cache: Retrieves all transcriptions into a list of string to be processed further (chunk, index, etc)
     """
 
     def __init__(self, outdir=None):
         self.model_path = config.conf.audio.model
-        self.outdir: Path
+        self.language = config.conf.audio.lang
         if outdir:
             self.outdir = Path(outdir)
         else:
             self.outdir = Path(config.conf.base_path) / config.conf.data.audio_cache
 
-    def transcribe_to_file(self, audio_path: str, language: str = None, diarize: bool = False, num_speakers: int = None,
-                           min_speakers: int = None, max_speakers: int = None) -> None:
-        """
-        Transcribe the audio file or URL provided in the config file and save it to a file.
-
-        Input:
-            audio_path (str): Path/URL to the audio to be transcribed.
-            output_dir (str, optional): Directory where the transcription file will be saved. Defaults to "data/audio_transcript".
-            language (str, optional): The language of spoken audio. Default to "en" (English).
-            diarize (bool, optional): Whether to perform speaker diarization. Default to False.
-
-        Returns:
-            None: This function does not return any value. The transcription is saved as a file.
-        """
-        # Set default values from config if not provided
-        language = language or config.conf.audio.lang
-        num_speakers = num_speakers or config.conf.audio.num_speakers
-        min_speakers = min_speakers or config.conf.audio.min_speakers
-        max_speakers = max_speakers or config.conf.audio.max_speakers
-
+    def load_audio_to_cache(self, urls: Iterable[str] | str):
+        """Load transcript from audio URL/path."""
+        # Make sure output folder exists
         self.outdir.mkdir(exist_ok=True)
 
-        try:
+        if isinstance(urls, str):
+            urls = [urls]
+
+        for url in urls:
             # Check whether the provided URL is valid
-            if audio_path.startswith(("http://", "https://")):
-                response = requests.get(audio_path)
-                response.raise_for_status()
+            if url.startswith(("http://", "https://")):
+                try:
+                    response = requests.get(url)
+                    response.raise_for_status()
+                except RequestException as e:
+                    logger.error(f"{url} is not a valid URL")
+                    continue
             # Check whether the provided file path exists
-            elif not audio_path.startswith(("http://", "https://")) and not Path(audio_path).exists():
-                raise FileNotFoundError(f"{audio_path} not found")
-        except RequestException as e:
-            logger.error(f"{audio_path} is not a valid URL")
-        except FileNotFoundError as e:
-            logger.error(f"{e}: {audio_path}")
+            elif not Path(url).exists():
+                logger.error(f"{url} not found")
+                continue
 
-        # If the same URL/audio file has been transcribed, it will read from existing transcription
-        expected_output_file = self.outdir / f"{Path(audio_path).parts[-2]}_{Path(audio_path).stem}.txt"
-        if expected_output_file.exists():
-            logger.info(f"Already cached {audio_path}")
+            self._transcribe_to_file(audio_path=url)
 
-        audio_path = str(preprocess_audio_file(audio_path))
-
-        logger.info(f"Transcribing {audio_path}")
-        command = [
-            "transcribe", "-m", self.model_path, "-f", audio_path, "-l", language,
-        ]
-        process = subprocess.Popen(" ".join(command), shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-        output, error = process.communicate()
-
-        decoded_str = output.decode('utf-8').strip()
-        processed_str = decoded_str.replace('[BLANK_AUDIO]', '').strip()
-
-        if diarize:
-            diarize_str = audio_diarize(audio_path, num_speakers=num_speakers, min_speakers=min_speakers,
-                                        max_speakers=max_speakers)
-            # Standardize the timestamp format of transcription & speaker diarization output
-            audio_segments = parse_audio_transcript(processed_str)
-            diarize_segments = parse_diarization(diarize_str)
-            # Match transcript with its speaker using timestamp
-            align_transcription_with_speakers(audio_path, audio_segments, diarize_segments)
-        else:
-            # Remove timestamp and combine lines of transcript into one paragraph
-            parsed_audio = parse_transcript(processed_str)
-
-            output_file = self.outdir / f"{Path(audio_path).stem}.txt"
-            output_file.write_text(" ".join(parsed_audio))
-            logger.debug(f"Transcript saved at {output_file}")
-
-        cleanup()
 
     def get_audio_cache(self) -> list[str]:
         """Get all previously cached audio transcript that was loaded to file"""
@@ -108,3 +64,95 @@ class AudioLoader:
             full_texts.append(fpath.read_text(encoding="utf8"))
 
         return full_texts
+
+
+    def _transcribe_to_file(self, audio_path: str) -> None:
+        """
+        Transcribe the audio file or URL provided in the config file and save it to a file.
+
+        Args:
+            audio_path (str): Path/URL to the audio to be transcribed.
+
+        Returns:
+            None: This function does not return any value. The transcription is saved as a file.
+        """
+        # Set the output file name by extracting the last two parts and set file extension as txt
+        file_name = "_".join(audio_path.split("/")[-2:])
+        output_file = self.outdir / f"{file_name.rsplit('.', 1)[0]}.txt"
+
+        # If the same URL/audio file has been transcribed, it will read from existing transcription
+        if output_file.exists():
+            logger.info(f"Already cached {audio_path}")
+            return
+
+        if audio_path.startswith(("http://", "https://")):
+            with self._download_audio_file(audio_path=audio_path) as temp_file:
+                with tempfile.TemporaryDirectory(delete=True, dir=config.conf.base_path) as tmpdir:
+                    wav_file = self._convert_to_wav(input_file=Path(temp_file.name), output_dir=Path(tmpdir), output_filename=file_name)
+                    transcript = self._transcribe_audio(wav_file=wav_file)
+                    self._save_transcript(transcript, output_file)
+        else:
+            with tempfile.TemporaryDirectory(delete=True, dir=config.conf.base_path) as tmpdir:
+                wav_file = self._convert_to_wav(input_file=Path(audio_path), output_dir=Path(tmpdir), output_filename=file_name)
+                transcript = self._transcribe_audio(wav_file=wav_file)
+                self._save_transcript(transcript, output_file)
+
+
+    def _download_audio_file(self, audio_path: str):
+        """Download audio file from URL and return a tempfile."""
+        logger.info(f"Processing: {audio_path}")
+
+        inputs = requests.get(audio_path).content
+        temp_file = tempfile.NamedTemporaryFile(delete=True, dir=config.conf.base_path)
+        temp_file.write(inputs)
+        temp_file.flush()
+        return temp_file
+
+
+    def _convert_to_wav(self, input_file: Path, output_dir: Path, output_filename: str) -> Path:
+        """Converts audio file into .wav format with 16kHz sampling."""
+        wav_file_name = output_dir / output_filename
+        if wav_file_name.suffix.lower() != ".wav":
+            wav_file = wav_file_name.with_suffix(".wav")
+            command = ["ffmpeg", "-y", "-i", str(input_file), "-ar", "16000", str(wav_file)]
+            try:
+                subprocess.run(command, check=True, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+            except subprocess.CalledProcessError as e:
+                raise RuntimeError(f"Error converting to WAV: {e}")
+
+            return wav_file
+        return input_file
+
+    def _transcribe_audio(self, wav_file) -> str:
+        """Transcribe .wav audio file using transcription model."""
+        logger.info(f"Transcribing {wav_file}")
+        command = f"transcribe -m '{self.model_path}' -f '{str(wav_file)}' -l '{self.language}'"
+        process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        output, error = process.communicate()
+
+        decoded_str = output.decode('utf-8').strip()
+        processed_str = decoded_str.replace('[BLANK_AUDIO]', '').strip()
+        return processed_str
+
+
+    def _save_transcript(self, transcript, output_file: Path):
+        """Write the transcript to a text file in the specified directory."""
+        parsed_audio = self._parse_transcript(transcript)
+        output_file.write_text(" ".join(parsed_audio))
+        logger.debug(f"Transcript saved at {output_file}")
+
+
+    def _parse_transcript(self, transcript: str) -> list[str]:
+        """Remove timestamp from raw transcription output and collect it as a paragraph."""
+        # Regex to match [hh:mm:ss.xxx --> hh:mm:ss.xxx] and the following text
+        pattern = r"\[(\d+):(\d+):([\d.]+)\.\d+ --> (\d+):(\d+):([\d.]+)\.\d+\]\s+(.+)"
+
+        transcript_segments = []
+        for match in re.finditer(pattern, transcript):
+            text = match.group(7).strip()
+            clean_text = re.sub(r"[^\w.,'?\-\s]", "", text)
+
+            transcript_segments.append(clean_text)
+
+        return transcript_segments
+

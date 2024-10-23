@@ -16,13 +16,9 @@ Again, mostly meant for experimentation. But allows to use via a CLI when instal
 - make sure `llama-cpp` runs with some sort of GPU / MPS support on your machine (or bring probably a lot of patience?). This should be installed separately before, the different cli commands should be accessible in the Path
 - download the models and put it under /dragtor/models folder
     - I use [a quantized Llama3.1 8B Instruct](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)
-    - For diarize (feature is not yet active), use [base EN model](https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-base.en.bin)
 - `uv run dragtor` to start via the CLI
-- install PyTorch, to use Mac-optimized packages:
-    - `pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/macos`
-    - Or common packages: `pip install torch torchvision torchaudio`
-  - `brew install ffmpeg` as it needed to convert audio format
-    - [!!!] This is a global installation for Mac
+- `brew install ffmpeg` as it needed to convert audio format
+  - [!!!] This is a global installation for Mac
 
 ## Current Overview
 
