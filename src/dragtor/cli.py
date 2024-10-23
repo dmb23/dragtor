@@ -78,16 +78,6 @@ class Cli:
         """Get an answer to your question based on the content of a file from the index cache"""
         return LocalDragtor().chat(question, statefile)
 
-    # @logger.catch
-    # def transform(self):
-    #     """Create additional features from available sources.
-    #
-    #     - extract topics per source
-    #     - create summaries per topic
-    #     - create question / answer pairs for each topic
-    #     """
-    #     raise NotImplementedError
-
     def eval(self, question: str = ""):
         """Evaluate the performance of the configured RAG setup.
 
@@ -96,7 +86,7 @@ class Cli:
         """
         if question:
             evaluator = QuestionEvaluator(question=question)
-            evaluator.run_eval()
+            evaluator.show_eval()
         else:
             evaluator = EvaluationSuite()
             evaluator.run_all_evals()

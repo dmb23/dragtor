@@ -295,6 +295,7 @@ class QuestionEvaluator(BaseModel):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        logger.info(f'Evaluating question "{self.question}"')
         if "_dragtor" in kwargs:
             if not isinstance(kwargs["_dragtor"], LocalDragtor):
                 logger.warning("wrong type for argument `_dragtor`")
@@ -320,13 +321,12 @@ class QuestionEvaluator(BaseModel):
                 gold_answers = json.loads(gold_truth_file.read_text())
                 logger.info(f'Using gold truth answer "{gold_answers.get(self.question, "")}"')
                 self.gold_truth = gold_answers.get(self.question, "")
-            self.gold_truth = ""
 
         if self.faithfullness is None:
             logger.info(f'Calculating Faithfullness for question "{self.question}"')
             self.faithfullness = _get_faithfullness(self.answer, self.context)
 
-        if (self.correctness is None) and self.gold_truth:
+        if (self.correctness is None) and (self.gold_truth != ""):
             logger.info(f'Calculating Correctness for question "{self.question}"')
             self.correctness = _get_answer_correctness(self.answer, self.gold_truth)
 
@@ -348,7 +348,7 @@ class EvaluationSuite(BaseModel):
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        if self.gold_answers is None:
+        if not self.gold_answers:
             gold_truth_file = (
                 Path(config.conf.base_path)
                 / config.conf.eval.eval_dir
@@ -360,7 +360,7 @@ class EvaluationSuite(BaseModel):
                 )
             self.gold_answers = json.loads(gold_truth_file.read_text())
 
-        if self.evaluations is None:
+        if not self.evaluations:
             dragtor = LocalDragtor()
             self.evaluations = {
                 question: QuestionEvaluator(question=question, _dragtor=dragtor)
@@ -377,9 +377,6 @@ class EvaluationSuite(BaseModel):
             logger.info("No questions to evaluate")
             return
         logger.info(f"Evaluating {len(self.evaluations)} questions")
-        for i, (question, evaluation) in enumerate(self.evaluations.items()):
-            logger.info(f"Evaluating Question {i+1}: {question}")
-            evaluation.show_eval()
 
         eval_file = (
             Path(config.conf.base_path) / config.conf.eval.eval_dir / f"{datetime.now()}_eval.json"
@@ -388,7 +385,7 @@ class EvaluationSuite(BaseModel):
 
         logger.info("Final Evaluations:")
         for i, (question, evaluation) in enumerate(self.evaluations.items()):
-            logger.info(f"Question {i+1}:")
+            logger.info(f"Question {i+1}: {question}")
             if evaluation.faithfullness:
                 logger.info(f"Faithfulness: {evaluation.faithfullness.fraction_true():.0%}")
             if evaluation.correctness:
