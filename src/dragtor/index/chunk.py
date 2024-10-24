@@ -51,7 +51,7 @@ class JinaTokenizerChunker(Chunker):
     """Use JINA tokenizer API for chunking"""
 
     def chunk_and_annotate(self, text: str) -> tuple[list[str], list[tuple[int, int]]]:
-        max_chunk_length = config.conf.select("chunker.jina_tokenizer.max_chunk_length", 1000)
+        max_chunk_length = config.conf.select("chunking.jina_tokenizer.max_chunk_length", 1000)
         # Define the API endpoint and payload
         url = "https://tokenize.jina.ai/"
         payload = {"content": text, "return_chunks": "true", "max_chunk_length": max_chunk_length}
@@ -77,8 +77,8 @@ class RecursiveCharacterChunker(Chunker):
 
         recursive_text_splitter = RecursiveCharacterTextSplitter(
             # Follow config's max chunk length
-            chunk_size=config.conf.select("chunker.langchain_tokenizer.max_chunk_length", 1000),
-            chunk_overlap=0,
+            chunk_size=config.conf.select("chunking.langchain_tokenizer.max_chunk_length", 1000),
+            chunk_overlap=config.conf.select("chunking.langchain_tokenizer.chunk_overlap", 0),
             length_function=len,
             is_separator_regex=False,
         )
@@ -96,7 +96,7 @@ class RecursiveCharacterChunker(Chunker):
             )
 
             # Update start_position value to end position, with excluding overlap
-            start_position = end_position + 1 - recursive_text_splitter._chunk_overlap
+            start_position = end_position - recursive_text_splitter._chunk_overlap
 
         return chunks, annotations
 
