@@ -35,12 +35,15 @@ class TestQueriesWithPersistentServer:
 def test_store_management(capfd, tmp_path):
     lsh = llm.LlamaServerHandler.from_config()
     lsh._checkpoint_dir = tmp_path
+    # make shure the test is independent of a potentailly existing other server
+    lsh._port = "51315"
     cache_file = tmp_path / "test.bin"
     messages = Messages()
     messages.system("You complete the last words of questions")
     messages.user("What is the meaning of")
 
-    lsh.chat_llm(messages, temperature=0)
+    with lsh:
+        lsh.chat_llm(messages, temperature=0)
     captured = capfd.readouterr()
     pattern = re.compile(r"prompt eval time[^\n]* (\d+) tokens")
     match = pattern.search(captured.out)
@@ -48,9 +51,11 @@ def test_store_management(capfd, tmp_path):
     assert match.group(1) == "26"
 
     with capfd.disabled():
-        lsh.store_state(messages, cache_file.name)
+        with lsh:
+            lsh.store_state(messages, cache_file.name)
 
-    lsh.chat_from_state(messages, cache_file.name)
+    with lsh:
+        lsh.chat_from_state(messages, cache_file.name)
 
     captured2 = capfd.readouterr()
     match2 = pattern.search(captured2.out)
