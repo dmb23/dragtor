@@ -13,7 +13,8 @@ def question() -> str:
 def test_cli_load(caplog, empty_store):
     Cli().load()
     print(caplog.text)
-    assert "Loaded data successfully" in caplog.text
+    assert "Loaded blog data successfully" in caplog.text
+    assert "Loaded audio data successfully" in caplog.text
     pass
 
 
