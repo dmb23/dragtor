@@ -5,7 +5,7 @@ data:
     - "test_blog"
   audio_cache: "audio_transcript/"
   audio_urls:
-    - "https://cdn-media.huggingface.co/speech_samples/sample3.flac"
+    - "https://cdn-media.huggingface.co/speech_samples/sample2.flac"
 embeddings:
   strategy: default
 store:
