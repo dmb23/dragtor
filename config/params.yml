@@ -1,8 +1,6 @@
 base_path: "/Users/mischa/Projects/local/dragtor/data/"
 # allows to use loguru for external loggers
 expose_library_logs: False
-# set GPU accelerator. mps for Apple ecosystem, CUDA for NVIDIA, etc.
-device: "mps"
 data:
   jina_cache: "jina_reader/"
   hoopers_urls:

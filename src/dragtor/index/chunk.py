@@ -69,7 +69,7 @@ class JinaTokenizerChunker(Chunker):
 
         return chunks, span_annotations
 
-class LangchainChunker(Chunker):
+class RecursiveCharacterChunker(Chunker):
     """Use Langchain API for chunking"""
     def chunk_and_annotate(self, text: str) -> tuple[list[str], list[tuple[int, int]]]:
         chunks = []
@@ -108,7 +108,7 @@ def get_chunker() -> Chunker:
         case "jina_tokenizer":
             return JinaTokenizerChunker()
         case "langchain":
-            return LangchainChunker()
+            return RecursiveCharacterChunker()
         case _:
             raise config.ConfigurationError(
                 f"invalid strategy to select chunker: {config.conf.select('chunking.strategy')}"

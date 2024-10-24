@@ -101,6 +101,7 @@ class AudioLoader:
 
         logger.info(f"Completed transcription for {audio_path}")
 
+
     def _download_audio_file(self, audio_path: str):
         """Download audio file from URL and return a tempfile."""
         inputs = requests.get(audio_path).content
@@ -154,7 +155,6 @@ class AudioLoader:
         for match in re.finditer(pattern, transcript):
             text = match.group(7).strip()
             clean_text = re.sub(r"[^\w.,'?\-\s]", "", text)
-
             transcript_segments.append(clean_text)
 
         return transcript_segments
