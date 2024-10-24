@@ -24,7 +24,6 @@ Again, mostly meant for experimentation. But allows to use via a CLI when instal
 ```commandline
 creds:
   jina: "jina_xxx"  # For JINA API
-  hf: "hf_xxx"  # For huggingface models' secret key
 ```
 
 ## Current Overview
