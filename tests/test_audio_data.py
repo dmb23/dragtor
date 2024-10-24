@@ -1,13 +1,10 @@
 import pytest
 import subprocess
 
+from importlib.resources import as_file, files
 from pathlib import Path
 from dragtor.audio_loader import AudioLoader
 from dragtor import config
-
-project_root = Path(__file__).parent.parent
-local_audio_sample = project_root / "tests" / "assets" / "audio_sample" / "sample.wav"
-local_invalid_audio_sample = project_root / "tests" / "assets" / "audio_sample" / "sample99.mp3"
 
 def test_ffmpeg_availability():
     """Test if your local machine already installed with ffmpeg."""
@@ -26,13 +23,18 @@ def setup_audio_loader():
     "test_url, expected_output",
     [
         ("https://cdn-media.huggingface.co/speech_samples/sample2.flac", True),
-        (str(local_audio_sample), True),
+        ("sample.wav", True),
         ("https://cdn-media.huggingface.co/speech_samples/samplex.flac", False),
-        (str(local_invalid_audio_sample), False),
+        ("sample99.wav", False),
     ]
 )
 def test_transcribe_to_file(setup_audio_loader, test_url, expected_output):
     audio_loader = setup_audio_loader
+
+    # Check if the test URL is a local file in assets, and use importlib.resources to locate it
+    if test_url in ["sample.wav", "sample99.mp3"]:
+        with as_file(files("tests.assets.audio_sample").joinpath(test_url)) as local_audio_sample:
+            test_url = str(local_audio_sample)
 
     # Run main function of AudioLoader for each URL
     audio_loader.load_audio_to_cache(test_url)
