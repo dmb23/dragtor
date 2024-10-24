@@ -46,7 +46,13 @@ def groq_the_question(question: str, text: str, n_repeat: int = 0) -> str:
         "Content-Type": "application/json",
     }
 
-    response = requests.post(url, data=json.dumps(data), headers=headers)
+    try:
+        response = requests.post(url, data=json.dumps(data), headers=headers)
+        response.raise_for_status()
+    except requests.RequestException as e:
+        logger.error(e)
+        return ""
+
     logger.debug(response.status_code)
     logger.debug(response.json())
 
