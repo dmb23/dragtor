@@ -1,6 +1,5 @@
 import pytest
 import subprocess
-import shutil
 
 from pathlib import Path
 from dragtor.audio_loader import AudioLoader
@@ -61,5 +60,5 @@ def test_get_audio_cache(setup_audio_loader):
     assert audio_full_texts[1].startswith("And before he had time") == True
 
     for file in audio_loader.outdir.glob("*.txt"):
-        if file.name == "audio_sample_sample.txt" or file.name == "speech_samples_sample2.txt":
+        if file.name in ["audio_sample_sample.txt", "speech_samples_sample2.txt"]:
             file.unlink()
