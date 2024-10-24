@@ -89,12 +89,12 @@ class AudioLoader:
 
         if audio_path.startswith(("http://", "https://")):
             with self._download_audio_file(audio_path=audio_path) as temp_file:
-                with tempfile.TemporaryDirectory(delete=True, dir=config.conf.base_path) as tmpdir:
+                with tempfile.TemporaryDirectory(dir=config.conf.base_path) as tmpdir:
                     wav_file = self._convert_to_wav(input_file=Path(temp_file.name), output_dir=Path(tmpdir), output_filename=file_name)
                     transcript = self._transcribe_audio(wav_file=wav_file)
                     self._save_transcript(transcript, output_file)
         else:
-            with tempfile.TemporaryDirectory(delete=True, dir=config.conf.base_path) as tmpdir:
+            with tempfile.TemporaryDirectory(dir=config.conf.base_path) as tmpdir:
                 wav_file = self._convert_to_wav(input_file=Path(audio_path), output_dir=Path(tmpdir), output_filename=file_name)
                 transcript = self._transcribe_audio(wav_file=wav_file)
                 self._save_transcript(transcript, output_file)
@@ -132,7 +132,7 @@ class AudioLoader:
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, error = process.communicate()
         if process.returncode != 0:
-            raise RuntimeError(f"Transcription process failed for {wav_file}")
+            raise RuntimeError(f"Transcription process failed for {wav_file}. Make sure transcription model is available under models/")
 
         decoded_str = output.decode('utf-8').strip()
         processed_str = decoded_str.replace('[BLANK_AUDIO]', '').strip()

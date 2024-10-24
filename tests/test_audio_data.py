@@ -51,13 +51,15 @@ def test_transcribe_to_file(setup_audio_loader, test_url, expected_output):
         assert not output_file.exists()
 
 def test_get_audio_cache(setup_audio_loader):
-    """Test for transcript retrievals."""
+    """Test for transcript retrievals. Make sure to run this after previous test."""
     audio_loader = setup_audio_loader
 
     audio_full_texts = audio_loader.get_audio_cache()
 
-    assert len(audio_full_texts) == 2
+    assert len(audio_full_texts) == 3
     assert audio_full_texts[0].startswith("And before he had time") == True
     assert audio_full_texts[1].startswith("And before he had time") == True
 
-    shutil.rmtree(audio_loader.outdir)
+    for file in audio_loader.outdir.glob("*.txt"):
+        if file.name == "audio_sample_sample.txt" or file.name == "speech_samples_sample2.txt":
+            file.unlink()
