@@ -8,6 +8,7 @@ from dragtor import config, data, audio_loader
 from dragtor.index.index import get_index
 from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor
+from dragtor.llm.evaluation import EvaluationSuite, QuestionEvaluator
 from dragtor.utils import ident
 
 
@@ -82,6 +83,19 @@ class Cli:
     def ask(self, question: str, statefile: str = "") -> str:
         """Get an answer to your question based on the content of a file from the index cache"""
         return LocalDragtor().chat(question, statefile)
+
+    def eval(self, question: str = ""):
+        """Evaluate the performance of the configured RAG setup.
+
+        - evaluate how many of the propositions in a given answer are based on the sources.
+        - possibly: evaluate answers to reference questions against gold truths
+        """
+        if question:
+            evaluator = QuestionEvaluator(question=question)
+            evaluator.show_eval()
+        else:
+            evaluator = EvaluationSuite()
+            evaluator.run_all_evals()
 
 
 def entrypoint():
