@@ -262,3 +262,23 @@ class LlamaServerHandler:
     def from_config(cls) -> Self:
         modelpath = config.conf.select("model.file_path", default=None)
         return cls(modelpath)
+
+
+@dataclass
+class GroqHandler:
+    url = "https://api.groq.com/openai/v1/chat/completions"
+
+    def chat_llm(self, messages: Messages, **kwargs) -> str:
+        headers = {"Content-Type": "application/json"}
+        data = {
+            "messages": messages.format(),
+            "n_predict": config.conf.select("model.max_completion_tokens", default=128),
+        }
+        data.update(kwargs)
+
+        # TODO: implement retries adjusted for Groq rate limits (should be included in the error message)
+        response = requests.post(self.url, headers=headers, data=json.dumps(data))
+        # logger.debug(f"Finish reason for answer: {result['choices'][0]['finish_reason']}")
+
+        result = response.json()
+        return result["choices"][0]["message"]["content"]
