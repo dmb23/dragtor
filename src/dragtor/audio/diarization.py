@@ -24,8 +24,6 @@ def _audio_diarize(wav_file):
     max_speakers = config.conf.select("audio.max_speakers", default=2)
 
     logger.info(f"Diarize {wav_file}")
-    output_dir = Path(config.conf.base_path) / config.conf.data.diarize_cache
-    output_dir.mkdir(exist_ok=True)
 
     # Load pre-trained model
     pipeline = Pipeline.from_pretrained(
@@ -37,13 +35,12 @@ def _audio_diarize(wav_file):
     diarization = pipeline(wav_file, num_speakers=num_speakers, min_speakers=min_speakers, max_speakers=max_speakers)
 
     diarization_results = []
-    # output_file = output_dir / f"{Path(wav_file).stem}.txt"
+
     for turn, _, speaker in diarization.itertracks(yield_label=True):
         diarization_results.append(f"Speaker {speaker}: {turn.start:.1f}s to {turn.end:.1f}s")
 
     diarization_str = "\n".join(diarization_results)
-    # output_file.write_text(diarization_str)
-    # logger.debug(f"Diarization saved at {output_file}")
+
     parsed_diarization = _parse_diarization_result(diarization_str)
 
     return parsed_diarization
