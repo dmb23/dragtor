@@ -2,7 +2,10 @@ from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 import functools
 import json
+from json.decoder import JSONDecodeError
+import math
 from pathlib import Path
+import re
 import shlex
 import subprocess
 from time import sleep
@@ -267,18 +270,95 @@ class LlamaServerHandler:
 @dataclass
 class GroqHandler:
     url = "https://api.groq.com/openai/v1/chat/completions"
+    n_max_retries: int = 3
+    n_json_output_tokens = 2048
 
     def chat_llm(self, messages: Messages, **kwargs) -> str:
-        headers = {"Content-Type": "application/json"}
+        headers = {
+            "Content-Type": "application/json",
+            "Authorization": f"Bearer {config.conf.creds.groq}",
+        }
         data = {
             "messages": messages.format(),
-            "n_predict": config.conf.select("model.max_completion_tokens", default=128),
+            "max_tokens": config.conf.select("model.max_completion_tokens", default=128),
         }
         data.update(kwargs)
 
-        # TODO: implement retries adjusted for Groq rate limits (should be included in the error message)
-        response = requests.post(self.url, headers=headers, data=json.dumps(data))
-        # logger.debug(f"Finish reason for answer: {result['choices'][0]['finish_reason']}")
+        response = self.post_to_groq(self.url, headers=headers, data=json.dumps(data))
+        if response.status_code != 200:
+            logger.warning("Could not get successfull response from groq!")
+            return ""
 
         result = response.json()
+        logger.debug(f"Finish reason for answer: {result['choices'][0]['finish_reason']}")
+
         return result["choices"][0]["message"]["content"]
+
+    def post_to_groq(self, *args, **kwargs):
+        """Send a POST request to Groq with custom retry strategy"""
+        n_retries = 0
+        response = None
+        while n_retries < self.n_max_retries:
+            response = requests.post(*args, **kwargs)
+            if response.status_code == 200:
+                return response
+            elif response.status_code == 429:
+                # rate limit exceeded, should have an error message:
+                logger.debug(response.json())
+                error_msg = response.json()["error"]["message"]
+                notification = re.search(r"Please try again in (\d+\.\d+)s", error_msg)
+                if notification:
+                    n_sec = math.ceil(float(notification.group(1))) + 1
+                else:
+                    n_sec = 10
+                logger.debug(f"waiting for {n_sec} seconds before retry")
+                sleep(n_sec)
+                n_retries += 1
+            elif (response.status_code == 400) and (
+                response.json()["error"]["code"] == "json_validate_failed"
+            ):
+                failed_json = response.json()["error"]["failed_generation"]
+                logger.debug("Recieved failing json, trying to clean it")
+                cleaned_json = self._clean_json(failed_json)
+
+                fake_response = requests.Response()
+                fake_response.status_code = 200
+                fake_response._content = cleaned_json.encode("utf-8")
+                return fake_response
+
+            else:
+                logger.warning(f"Unexpected response from Groq (Code {response.status_code})")
+                logger.warning(response.json())
+                logger.debug("waiting for 10 secondes before retry")
+                sleep(10)
+                n_retries += 1
+        # in case n_max_retries is 0 or neg:
+        if response is None:
+            response = requests.post(*args, **kwargs)
+        return response
+
+    def _clean_json(self, faulty_json: str) -> str:
+        json_prompt = """
+        To ensure proper JSON schema formatting for input to a large language model, follow these rules:
+        use double quotes for all keys and string values, escape any double quotes within string values with a backslash (\\), separate key-value pairs with commas, enclose objects in curly braces ({{}}), and arrays in square brackets ([]).
+        Ensure all keys are unique within the same object, values can be strings, numbers, objects, arrays, true, false, or null.
+        Maintain proper nesting and closure of braces and brackets.
+        Avoid trailing commas after the last key-value pair or array item.
+        Use UTF-8 encoding and ensure the entire JSON is a single valid structure without extraneous characters.
+        The following JSON string is invalid. Fix it. {e}
+        {failing_json}
+        """
+        json_error_message = ""
+        try:
+            json.loads(faulty_json)
+            logger.info("It is actually possible to parse the response to json")
+            return faulty_json
+        except JSONDecodeError as e:
+            json_error_message = e
+        logger.debug(f"recieved json:\n{faulty_json}")
+        logger.debug(f"json error:\n{json_error_message}")
+        correcting_messages = Messages()
+        correcting_messages.user(json_prompt.format(e=json_error_message, failing_json=faulty_json))
+        corrected_answer = self.chat_llm(correcting_messages, max_tokens=self.n_json_output_tokens)
+
+        return corrected_answer

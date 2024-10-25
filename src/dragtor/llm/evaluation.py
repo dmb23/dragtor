@@ -4,17 +4,23 @@ import json
 from pathlib import Path
 
 from loguru import logger
-from pydantic import BaseModel, Field, PrivateAttr, computed_field
+from pydantic import BaseModel, Field, PrivateAttr, ValidationError, computed_field
 
 from dragtor import config
-from dragtor.llm import LlamaServerHandler
 from dragtor.llm.dragtor import LocalDragtor
+from dragtor.llm.llm import GroqHandler, LlamaServerHandler
 from dragtor.utils import Messages
 
 # ruff: noqa: E501
 # -> lots of long example strings
 
-lsh = LlamaServerHandler.from_config()
+USE_GROQ = True
+if USE_GROQ:
+    gh = GroqHandler()
+    GROQ_MODEL = "llama-3.1-70b-versatile"
+    # GROQ_MODEL = "mixtral-8x7b-32768"
+else:
+    lsh = LlamaServerHandler.from_config()
 
 # these magic numbers should be easy to adjust
 # Ideal: automatically adjust to the length of the question / number of propositions
@@ -133,12 +139,22 @@ def _get_propositions(text: str) -> Propositions:
     messages.assistant(ex_out)
     messages.user(user_prompt_template.format(content=text))
 
-    answer = lsh.chat_llm(
-        messages,
-        cache_prompt=True,
-        json_schema=Propositions.model_json_schema(),
-        n_predict=proposition_output_tokens,
-    )
+    if USE_GROQ:
+        answer = gh.chat_llm(
+            messages,
+            max_tokens=proposition_output_tokens,
+            model=GROQ_MODEL,
+            response_format=dict(type="json_object"),
+            temperature=0,
+        )
+    else:
+        answer = lsh.chat_llm(
+            messages,
+            cache_prompt=True,
+            json_schema=Propositions.model_json_schema(),
+            n_predict=proposition_output_tokens,
+            temperature=0,
+        )
 
     propositions = Propositions.model_validate_json(answer)
 
@@ -209,12 +225,22 @@ def _get_faithfullness(answer: str, context: str) -> EvalFaithful:
     messages.assistant(ex_out.model_dump_json())
     messages.user(_format_user_message(statements=props.propositions, context=context))
 
-    answer = lsh.chat_llm(
-        messages,
-        cache_prompt=True,
-        json_schema=EvalFaithful.model_json_schema(),
-        n_predict=faithfulness_output_tokens,
-    )
+    if USE_GROQ:
+        answer = gh.chat_llm(
+            messages,
+            max_tokens=faithfulness_output_tokens,
+            model=GROQ_MODEL,
+            response_format=dict(type="json_object"),
+            temperature=0,
+        )
+    else:
+        answer = lsh.chat_llm(
+            messages,
+            cache_prompt=True,
+            json_schema=EvalFaithful.model_json_schema(),
+            n_predict=faithfulness_output_tokens,
+            temperature=0,
+        )
 
     ef = EvalFaithful.model_validate_json(answer)
 
@@ -227,8 +253,8 @@ def _get_answer_correctness(model_answer: str, gold_answer: str) -> EvalAnswerCo
     Following mostly concepts from [Ragas](https://github.com/explodinggradients/ragas/blob/main/src/ragas/metrics/_answer_correctness.py)
     """
     logger.debug("Calculating Answer Correctness")
-    props_model_answer = _get_propositions(model_answer)
-    props_gold_answer = _get_propositions(gold_answer)
+    props_model_answer: Propositions = _get_propositions(model_answer)
+    props_gold_answer: Propositions = _get_propositions(gold_answer)
 
     sys_prompt = """
     Given a ground truth and statements from an answer, analyze each statement and classify them in one of the following categories:
@@ -260,20 +286,77 @@ def _get_answer_correctness(model_answer: str, gold_answer: str) -> EvalAnswerCo
     </answer>
     """
 
-    messages = Messages()
-    messages.system(sys_prompt)
+    ex_in = user_prompt_template.format(
+        answer=Propositions(
+            propositions=[
+                "The sky is blue when no clouds are present.",
+                "The blue color of the sky is due to light diffraction.",
+            ]
+        ),
+        ground_truth=Propositions(
+            propositions=[
+                "The color of the sky is determined by the diffraction of the sunlight.",
+                "The color of the sky can change with the angle of the sun.",
+            ]
+        ),
+    )
+    ex_out = AnswerCorrectness(
+        statements=[
+            TruthCategory(
+                statement="The sky is blue when no clouds are present.",
+                reasoning="The exact color of the sky is not mentioned in the ground_truth.",
+                classification=ClassificationCategory.FP,
+            ),
+            TruthCategory(
+                statement="The blue color of the sky is due to light diffraction.",
+                reasoning="It is mentioned in the ground_truth that the color of the sky is determined by the diffraction of the sunlight.",
+                classification=ClassificationCategory.TP,
+            ),
+            TruthCategory(
+                statement="The color of the sky is determined by the diffraction of the sunlight.",
+                reasoning="The answer includes the role of light diffraction on the color of the sky.",
+                classification=ClassificationCategory.TP,
+            ),
+            TruthCategory(
+                statement="The color of the sky can change with the angle of the sun.",
+                reasoning="The answer does only provide a fixed color for the sky and does not mention that it can change.",
+                classification=ClassificationCategory.FN,
+            ),
+        ]
+    )
+
     user_message = user_prompt_template.format(
         ground_truth=props_gold_answer, answer=props_model_answer
     )
+
+    messages = Messages()
+    messages.system(sys_prompt)
+    messages.user(ex_in)
+    messages.assistant(ex_out.model_dump_json())
     messages.user(user_message)
 
-    res = lsh.chat_llm(
-        messages,
-        cache_prompt=True,
-        json_schema=AnswerCorrectness.model_json_schema(),
-        n_predict=correctness_output_tokens,
-    )
-    answer_correctness = AnswerCorrectness.model_validate_json(res)
+    if USE_GROQ:
+        res = gh.chat_llm(
+            messages,
+            max_tokens=correctness_output_tokens,
+            model=GROQ_MODEL,
+            response_format=dict(type="json_object"),
+            temperature=0,
+        )
+    else:
+        res = lsh.chat_llm(
+            messages,
+            cache_prompt=True,
+            json_schema=AnswerCorrectness.model_json_schema(),
+            n_predict=correctness_output_tokens,
+            temperature=0,
+        )
+
+    try:
+        answer_correctness = AnswerCorrectness.model_validate_json(res)
+    except ValidationError as e:
+        logger.error(res)
+        raise e
 
     eval = EvalAnswerCorrectness(
         tp=[s for s in answer_correctness.statements if s.classification.value == "TP"],
