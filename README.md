@@ -34,6 +34,8 @@ creds:
   4. After a few minutes, find an executable file with name `main`
   5. Copy it to /dragtor folder, and rename it to `transcribe`
      - If you're using Mac terminal: `cp main /<your-path>/dragtor/transcribe`
+- Add dragtor project path into your system path
+  - For example, in ~/.zshrc (or another system file): `export PATH="$PATH:/<your-path>/dragtor`
 
 ## Current Overview
 
