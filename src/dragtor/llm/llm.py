@@ -1,4 +1,3 @@
-from collections import deque
 from dataclasses import dataclass, field
 from enum import Enum, IntEnum
 import functools
@@ -139,6 +138,7 @@ class LlamaServerHandler:
         @functools.wraps(func)
         def wrapper_decorator(self, *args, **kwargs):
             state = self._check_for_server()
+            logger.debug(f"Checking Server state before executing command: {state.name}")
             match state:
                 case ServerState.UP:
                     # server is running externally
@@ -198,6 +198,7 @@ class LlamaServerHandler:
             if response.status_code != 200:
                 logger.error(f"Recieved response status {response.status_code}")
             result = response.json()
+            logger.debug(f"Finish reason for answer: {result['choices'][0]['finish_reason']}")
             return result["choices"][0]["message"]["content"]
         except requests.RequestException as e:
             logger.error(f"Error querying Llama server: {e}")

@@ -13,8 +13,8 @@ data:
     # - "https://www.hoopersbeta.com/library/will-hangboarding-2x/day-improve-your-climbing-ultimate-revised-breakdown"
   audio_cache: "audio_transcript/"
   audio_urls:
-     - "https://cdn-media.huggingface.co/speech_samples/sample2.flac"
-#    - "https://cdn.simplecast.com/audio/8d0e41cc-be61-4d71-ab0d-b985db72bb92/episodes/42685a36-6381-4017-ad34-48fe1822e83e/audio/2c2a3b1c-7b39-4852-a947-6f7ea10dbf98/default_tc.mp3"
+    # - "https://cdn-media.huggingface.co/speech_samples/sample2.flac"
+    - "https://cdn.simplecast.com/audio/8d0e41cc-be61-4d71-ab0d-b985db72bb92/episodes/42685a36-6381-4017-ad34-48fe1822e83e/audio/2c2a3b1c-7b39-4852-a947-6f7ea10dbf98/default_tc.mp3"
   diarize_cache: "diarize_transcript/"
 chunking:
   # valid strategies: paragraph [default], jina_tokenizer, langchain
@@ -23,6 +23,7 @@ chunking:
     max_chunk_length: 1000
   langchain_tokenizer:
     max_chunk_length: 1000
+    chunk_overlap: 0
 embeddings:
   # valid strategies: chromadb [default], jina
   strategy: jina
@@ -68,6 +69,11 @@ prompts:
     {question}
 
     answer:
+server:
+  backoff: 1.0
+eval:
+  eval_dir: "eval"
+  eval_answers: "gold_answers.json"
 audio:
   model: "/Users/mischa/Projects/local/dragtor/models/ggml-base.en.bin"
   files: "/Users/mischa/Projects/local/dragtor/data/audio_files/"

@@ -4,7 +4,8 @@ data:
   hoopers_urls:
     - "test_blog"
   audio_cache: "audio_transcript/"
-  diarize_cache: "diarize_transcript/"
+  audio_urls:
+    - "https://cdn-media.huggingface.co/speech_samples/sample2.flac"
 embeddings:
   strategy: default
 store:

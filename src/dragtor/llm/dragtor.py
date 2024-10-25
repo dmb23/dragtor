@@ -32,8 +32,7 @@ class LocalDragtor:
         Use chunks from RAG retrieval as context."""
         context = self._get_context(question)
         prompt = self._expand_user_prompt(question, context)
-        with self.llm:
-            result = self.llm.query_llm(prompt, **kwargs)
+        result = self.llm.query_llm(prompt, **kwargs)
 
         return result
 
@@ -46,7 +45,6 @@ class LocalDragtor:
     def _expand_user_prompt(self, question: str, context: str, is_chat: bool = False) -> str:
         """Infuse a question of the user with context"""
         prompt = self.user_prompt_template.format(context=context, question=question)
-        logger.debug(f"built final prompt:\n{prompt}")
         if not is_chat and len(self.system_prompt) > 0:
             prompt = "\n\n".join([self.system_prompt, prompt])
         return prompt
@@ -66,8 +64,7 @@ class LocalDragtor:
         if contextfile == "":
             context = self._get_context(question)
             messages = self._to_messages(question, context)
-            with self.llm:
-                result = self.llm.chat_llm(messages, **kwargs)
+            result = self.llm.chat_llm(messages, **kwargs)
         else:
             context = Path(contextfile).resolve().read_text()
             context_id = ident(context)

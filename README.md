@@ -6,7 +6,7 @@ This is a solution to get grounded LLM advice on climbing-related health and tra
 All model interactions are meant to run locally, developed for an Mac M1.
 
 > [!CAUTION]
-> This is meant as a techncal project to work with different technologies, not to replace health professionals.
+> This is meant as a technical project to work with different technologies, not to replace health professionals.
 > Please do not rely on a machine with a lab coat and a stethoscope for your health questions!
 
 ## Getting Started
@@ -16,13 +16,26 @@ Again, mostly meant for experimentation. But allows to use via a CLI when instal
 - make sure `llama-cpp` runs with some sort of GPU / MPS support on your machine (or bring probably a lot of patience?). This should be installed separately before, the different cli commands should be accessible in the Path
 - download the models and put it under /dragtor/models folder
     - I use [a quantized Llama3.1 8B Instruct](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)
-    - For diarize (feature is not yet active), use [base EN model](https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-base.en.bin)
+    - For transcription, use [base EN model](https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-base.en.bin)
 - `uv run dragtor` to start via the CLI
-- install PyTorch, to use Mac-optimized packages:
-    - `pip install torch torchvision torchaudio --extra-index-url https://download.pytorch.org/whl/macos`
-    - Or common packages: `pip install torch torchvision torchaudio`
-  - `brew install ffmpeg` as it needed to convert audio format
-    - [!!!] This is a global installation for Mac
+- `brew install ffmpeg` as it needed to convert audio format
+  - [!!!] This is a global installation for Mac
+- setup a secret credential to store secret keys: config/credentials.yml
+```commandline
+creds:
+  jina: "jina_xxx"  # For JINA API
+```
+- to run transcription feature, we need an executable file from [whisper.cpp](https://github.com/ggerganov/whisper.cpp):
+  1. Clone the project into your local machine: `git clone https://github.com/ggerganov/whisper.cpp.git`
+  2. Navigate into the directory: `cd whisper.cpp`
+  3. Compile the project using the provided Makefile: `make base.en`
+     - Transcription model can also be found under /whisper.cpp/models
+     - You can also directly copy this model into /dragtor/models. Using Mac terminal: `cp models/ggml-base.en.bin /<your-path>/dragtor/models/`
+  4. After a few minutes, find an executable file with name `main`
+  5. Copy it to /dragtor folder, and rename it to `transcribe`
+     - If you're using Mac terminal: `cp main /<your-path>/dragtor/transcribe`
+- Add dragtor project path into your system path
+  - For example, in ~/.zshrc (or another system file): `export PATH="$PATH:/<your-path>/dragtor`
 
 ## Current Overview
 

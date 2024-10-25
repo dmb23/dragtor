@@ -1,7 +1,5 @@
 """Process Logic for dRAGtor application. Neatly packed as a CLI"""
 
-import hashlib
-
 import fire
 from loguru import logger
 from omegaconf import OmegaConf
@@ -11,6 +9,8 @@ from dragtor.audio import audio_loader
 from dragtor.index.index import get_index
 from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor
+from dragtor.llm.evaluation import EvaluationSuite, QuestionEvaluator
+from dragtor.utils import ident
 
 
 class Cli:
@@ -34,8 +34,7 @@ class Cli:
 
         audio_urls = config.conf.data.audio_urls
         logger.debug(f"loading audio urls:\n{audio_urls}")
-        for audio_url in audio_urls:
-            audio_loader.AudioLoader().transcribe_to_file(audio_url, diarize=False)
+        audio_loader.AudioLoader().load_audio_to_cache(urls=audio_urls)
         logger.info("Loaded audio data successfully")
 
     def clear_index(self):
@@ -66,10 +65,8 @@ class Cli:
 
         ld = LocalDragtor()
         for i, text in enumerate(full_texts):
-            text_id = hashlib.md5(text.encode("utf-8")).hexdigest()
+            text_id = ident(text)
             messages = ld._to_messages(question="", context=text)
-            stop_loc = messages[1]["content"].find("\nquestion:\n\n")
-            messages[1]["content"] = messages[1]["content"][:stop_loc]
             filename = f"{text_id}.bin"
             ld.llm.store_state(messages, filename)
             logger.info(f"Preloaded {i+1}/{len(full_texts)} texts")
@@ -87,6 +84,19 @@ class Cli:
     def ask(self, question: str, statefile: str = "") -> str:
         """Get an answer to your question based on the content of a file from the index cache"""
         return LocalDragtor().chat(question, statefile)
+
+    def eval(self, question: str = ""):
+        """Evaluate the performance of the configured RAG setup.
+
+        - evaluate how many of the propositions in a given answer are based on the sources.
+        - possibly: evaluate answers to reference questions against gold truths
+        """
+        if question:
+            evaluator = QuestionEvaluator(question=question)
+            evaluator.show_eval()
+        else:
+            evaluator = EvaluationSuite()
+            evaluator.run_all_evals()
 
 
 def entrypoint():

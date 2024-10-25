@@ -51,7 +51,7 @@ class JinaTokenizerChunker(Chunker):
     """Use JINA tokenizer API for chunking"""
 
     def chunk_and_annotate(self, text: str) -> tuple[list[str], list[tuple[int, int]]]:
-        max_chunk_length = config.conf.select("chunker.jina_tokenizer.max_chunk_length", 1000)
+        max_chunk_length = config.conf.select("chunking.jina_tokenizer.max_chunk_length", 1000)
         # Define the API endpoint and payload
         url = "https://tokenize.jina.ai/"
         payload = {"content": text, "return_chunks": "true", "max_chunk_length": max_chunk_length}
@@ -69,7 +69,7 @@ class JinaTokenizerChunker(Chunker):
 
         return chunks, span_annotations
 
-class LangchainChunker(Chunker):
+class RecursiveCharacterChunker(Chunker):
     """Use Langchain API for chunking"""
     def chunk_and_annotate(self, text: str) -> tuple[list[str], list[tuple[int, int]]]:
         chunks = []
@@ -77,8 +77,8 @@ class LangchainChunker(Chunker):
 
         recursive_text_splitter = RecursiveCharacterTextSplitter(
             # Follow config's max chunk length
-            chunk_size=config.conf.select("chunker.langchain_tokenizer.max_chunk_length", 1000),
-            chunk_overlap=0,
+            chunk_size=config.conf.select("chunking.langchain_tokenizer.max_chunk_length", 1000),
+            chunk_overlap=config.conf.select("chunking.langchain_tokenizer.chunk_overlap", 0),
             length_function=len,
             is_separator_regex=False,
         )
@@ -108,7 +108,7 @@ def get_chunker() -> Chunker:
         case "jina_tokenizer":
             return JinaTokenizerChunker()
         case "langchain":
-            return LangchainChunker()
+            return RecursiveCharacterChunker()
         case _:
             raise config.ConfigurationError(
                 f"invalid strategy to select chunker: {config.conf.select('chunking.strategy')}"

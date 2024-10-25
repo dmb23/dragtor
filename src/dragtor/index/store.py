@@ -1,6 +1,5 @@
 from abc import ABC, abstractmethod
 from dataclasses import dataclass, field
-import hashlib
 from pathlib import Path
 
 import chromadb
@@ -10,6 +9,7 @@ from loguru import logger
 from dragtor import config
 from dragtor.index import RetrievalError
 from dragtor.index.embed import Embedder, get_embedder
+from dragtor.utils import ident
 
 
 @dataclass
@@ -64,7 +64,7 @@ class ChromaDBStore(VectorStore):
     def add_chunks(self, chunks: list[str]) -> None:
         n_init = len(self.collection.get()["ids"])
         chunks = list(set(chunks))
-        ids = [hashlib.md5(chunk.encode("utf-8")).hexdigest() for chunk in chunks]
+        ids = [ident(chunk) for chunk in chunks]
         embeddings = self.embedder.ef(chunks)
         self.collection.add(documents=chunks, ids=ids, embeddings=embeddings)
         n_post = len(self.collection.get()["ids"])

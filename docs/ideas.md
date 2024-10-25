@@ -5,7 +5,36 @@
 - ✅ figure out how to use [[#Model Checkpoints]] and decide how to continue for now:
     - ✅I can continue to use the `llama-server` command and manage slot state
     - ✅that means I can continue to use the easy interface via chat messages with better message ending
-- figure out how conversation mode works with the `llama-cli` command
+- ~figure out how conversation mode works with the `llama-cli` command~
+
+- 💡 Allow for evaluation of RAG answers
+    - ✅ faithfulness: 
+        - extract propositions from an answer.
+        - for each proposition:
+            - check if proposition can be attributed to source context
+    - 󰹏 AnswerCorrectness
+        - extract propositions from an answer.
+            - check how the proposition relates to a reference answer:
+                - TP: proposition is present in reference
+                - FP: proposition is not present in reference
+                - FN: proposition from reference is not present in answer
+
+- Finish Implementation
+    - ✅ AnswerCorrectness
+    - ✅ check: can I rewrite the `LlamaServerHandler` so that it detects if a server is up and wraps any call only if required? Maybe as a decorator, maybe in the relevant functions?
+    - evaluate performance
+        - 💡 make it end-to-end usable
+        - create defined testcases
+        - create evaluation summaries
+        - revisit reference answers using the full text as context ( ~ 9750 tokens )
+            - use Llama3.1-70B from Grok and tune the prompt for faithfulness?
+    - create features
+        - store features from script in VectorStore
+    - late chunking
+
+- improve chunking
+    - late chunking in combination with semantic chunking sounds interesting
+    - look into agentic chunking!
 
 ## Open Issues
 
@@ -41,7 +70,6 @@ It should be possible to save the model state to disk.
 - ✅ ~implement a proper prompt for Llama3.1~
 - ✅ ~implement the correct distance function for retrieval~
 - ✅ ~create good questions to be answered with the available information.~
-    - build reference answers using the full text as context ( ~ 9750 tokens )
 
 ### Bugs
 
