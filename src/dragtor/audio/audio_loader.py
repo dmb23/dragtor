@@ -1,12 +1,14 @@
 import subprocess
 import requests
 import re
+import tempfile
 
 from typing import Iterable
 from pathlib import Path
 from loguru import logger
 from requests.exceptions import RequestException
 from dragtor import config
+from dragtor.audio.audio_diarization_utils import _parse_transcript_to_diarization, _audio_diarize, _save_diarization_transcript
 
 
 class AudioLoader:
@@ -14,7 +16,8 @@ class AudioLoader:
     A class to handle audio transcription and audio diarization (optional), then saving the result to files.
 
     Attributes
-        model (str): The model file path used for transcription. Defaults to audio.model under config.
+        model_path (str): The model file path used for transcription. Defaults to audio.model under config.
+        language(str): Language used in the audio file.
         outdir (str): Output path where the results are stored. Defaults to base_path/data.audio_cache under config.
 
     Methods
@@ -32,6 +35,7 @@ class AudioLoader:
 
     def load_audio_to_cache(self, urls: Iterable[str] | str):
         """Load transcript from audio URL/path."""
+        diarize = config.conf.audio.diarize # TODO: Should we set this on URL-level?
         # Make sure output folder exists
         self.outdir.mkdir(exist_ok=True)
 
@@ -52,7 +56,7 @@ class AudioLoader:
                 logger.error(f"{url} not found")
                 continue
 
-            self._transcribe_to_file(audio_path=url)
+            self._transcribe_to_file(audio_path=url, diarize=diarize)
 
 
     def get_audio_cache(self) -> list[str]:
@@ -65,7 +69,7 @@ class AudioLoader:
         return full_texts
 
 
-    def _transcribe_to_file(self, audio_path: str) -> bool:
+    def _transcribe_to_file(self, audio_path: str, diarize: bool) -> bool:
         """
         Transcribe the audio file or URL provided in the config file and save it to a file.
 
@@ -79,7 +83,10 @@ class AudioLoader:
 
         # Set the output file name by extracting the last two parts and set file extension as txt
         file_name = self._clean_filename("_".join(audio_path.split("/")[-2:]))
-        output_file = self.outdir / f"{file_name.rsplit('.', 1)[0]}.txt"
+        if diarize:
+            output_file = self.outdir / f"diarize_{file_name.rsplit('.', 1)[0]}.txt"
+        else:
+            output_file = self.outdir / f"{file_name.rsplit('.', 1)[0]}.txt"
 
         # If the same URL/audio file has been transcribed, it will read from existing transcription
         if output_file.exists():
@@ -91,12 +98,23 @@ class AudioLoader:
                 with tempfile.TemporaryDirectory(dir=config.conf.base_path) as tmpdir:
                     wav_file = self._convert_to_wav(input_file=Path(temp_file.name), output_dir=Path(tmpdir), output_filename=file_name)
                     transcript = self._transcribe_audio(wav_file=wav_file)
-                    self._save_transcript(transcript, output_file)
+                    if diarize:
+                        parsed_transcription = _parse_transcript_to_diarization(transcript)
+                        parsed_diarization = _audio_diarize(wav_file)
+                        _save_diarization_transcript(parsed_transcription, parsed_diarization, output_file)
+                    else:
+                        self._save_transcript(transcript, output_file)
         else:
             with tempfile.TemporaryDirectory(dir=config.conf.base_path) as tmpdir:
                 wav_file = self._convert_to_wav(input_file=Path(audio_path), output_dir=Path(tmpdir), output_filename=file_name)
                 transcript = self._transcribe_audio(wav_file=wav_file)
-                self._save_transcript(transcript, output_file)
+                if diarize:
+                    if diarize:
+                        parsed_transcription = _parse_transcript_to_diarization(transcript)
+                        parsed_diarization = _audio_diarize(wav_file)
+                        _save_diarization_transcript(parsed_transcription, parsed_diarization, output_file)
+                else:
+                    self._save_transcript(transcript, output_file)
 
         logger.info(f"Completed transcription for {audio_path}")
 
@@ -131,7 +149,7 @@ class AudioLoader:
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, error = process.communicate()
         if process.returncode != 0:
-            raise RuntimeError(f"Transcription process failed for {wav_file}. Make sure transcription model is available under models/")
+            raise RuntimeError(f"Transcription process failed for {wav_file} with error {error.decode('utf-8')}. Make sure transcription model is available under models/")
 
         decoded_str = output.decode('utf-8').strip()
         processed_str = decoded_str.replace('[BLANK_AUDIO]', '').strip()
@@ -140,12 +158,12 @@ class AudioLoader:
 
     def _save_transcript(self, transcript, output_file: Path):
         """Write the transcript to a text file in the specified directory."""
-        parsed_audio = self._parse_transcript(transcript)
+        parsed_audio = self._parse_transcript_to_paragraph(transcript)
         output_file.write_text(" ".join(parsed_audio))
         logger.debug(f"Transcript saved at {output_file}")
 
 
-    def _parse_transcript(self, transcript: str) -> list[str]:
+    def _parse_transcript_to_paragraph(self, transcript: str) -> list[str]:
         """Remove timestamp from raw transcription output and collect it as a paragraph."""
         # Regex to match [hh:mm:ss.xxx --> hh:mm:ss.xxx] and the following text
         pattern = r"\[(\d+):(\d+):([\d.]+)\.\d+ --> (\d+):(\d+):([\d.]+)\.\d+\]\s+(.+)"

@@ -17,14 +17,8 @@ Again, mostly meant for experimentation. But allows to use via a CLI when instal
 - download the models and put it under /dragtor/models folder
     - I use [a quantized Llama3.1 8B Instruct](https://huggingface.co/bartowski/Meta-Llama-3.1-8B-Instruct-GGUF/blob/main/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf)
     - For transcription, use [base EN model](https://huggingface.co/ggerganov/whisper.cpp/blob/main/ggml-base.en.bin)
-- `uv run dragtor` to start via the CLI
 - `brew install ffmpeg` as it needed to convert audio format
   - [!!!] This is a global installation for Mac
-- setup a secret credential to store secret keys: config/credentials.yml
-```commandline
-creds:
-  jina: "jina_xxx"  # For JINA API
-```
 - to run transcription feature, we need an executable file from [whisper.cpp](https://github.com/ggerganov/whisper.cpp):
   1. Clone the project into your local machine: `git clone https://github.com/ggerganov/whisper.cpp.git`
   2. Navigate into the directory: `cd whisper.cpp`
@@ -36,6 +30,13 @@ creds:
      - If you're using Mac terminal: `cp main /<your-path>/dragtor/transcribe`
 - Add dragtor project path into your system path
   - For example, in ~/.zshrc (or another system file): `export PATH="$PATH:/<your-path>/dragtor`
+- `uv run dragtor` to start via the CLI
+- setup a secret credential to store secret keys: config/credentials.yml
+```commandline
+creds:
+  jina: "jina_xxx"  # For JINA API
+  hf: "hf_xxx"  # For huggingface secret key to use diarization model
+```
 
 ## Current Overview
 

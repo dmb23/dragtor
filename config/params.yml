@@ -75,6 +75,7 @@ eval:
   eval_dir: "eval"
   eval_answers: "gold_answers.json"
 audio:
+  diarize: False
   model: "/Users/mischa/Projects/local/dragtor/models/ggml-base.en.bin"
   files: "/Users/mischa/Projects/local/dragtor/data/audio_files/"
   diarization_model: "pyannote/speaker-diarization-3.1"
