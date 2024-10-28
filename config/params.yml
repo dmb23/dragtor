@@ -14,8 +14,8 @@ data:
      - "https://cdn-media.huggingface.co/speech_samples/sample2.flac"
 #     - "https://cdn.simplecast.com/audio/8d0e41cc-be61-4d71-ab0d-b985db72bb92/episodes/42685a36-6381-4017-ad34-48fe1822e83e/audio/2c2a3b1c-7b39-4852-a947-6f7ea10dbf98/default_tc.mp3"
 chunking:
-  # valid strategies: paragraph [default], jina_tokenizer, langchain
-  strategy: langchain
+  # valid strategies: paragraph [default], jina_tokenizer, recursive_char
+  strategy: recursive_char
   jina_tokenizer:
     max_chunk_length: 1000
   langchain_tokenizer:

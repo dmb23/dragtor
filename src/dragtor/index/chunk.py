@@ -107,7 +107,7 @@ def get_chunker() -> Chunker:
             return ParagraphChunker()
         case "jina_tokenizer":
             return JinaTokenizerChunker()
-        case "langchain":
+        case "recursive_char":
             return RecursiveCharacterChunker()
         case _:
             raise config.ConfigurationError(

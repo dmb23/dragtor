@@ -11,3 +11,4 @@ config/credentials*
 .zed
 llama.log
 .aider*
+transcribe

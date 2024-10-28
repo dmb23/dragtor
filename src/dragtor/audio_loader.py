@@ -15,7 +15,8 @@ class AudioLoader:
     A class to handle audio transcription and audio diarization (optional), then saving the result to files.
 
     Attributes
-        model (str): The model file path used for transcription. Defaults to audio.model under config.
+        model_path (str): The model file path used for transcription. Defaults to audio.model under config.
+        language(str): Language used in the audio file.
         outdir (str): Output path where the results are stored. Defaults to base_path/data.audio_cache under config.
 
     Methods
@@ -31,11 +32,11 @@ class AudioLoader:
         else:
             self.outdir = Path(config.conf.base_path) / config.conf.data.audio_cache
 
-    def load_audio_to_cache(self, urls: Iterable[str] | str):
-        """Load transcript from audio URL/path."""
         # Make sure output folder exists
         self.outdir.mkdir(exist_ok=True)
 
+    def load_audio_to_cache(self, urls: Iterable[str] | str):
+        """Load transcript from audio URL/path."""
         if isinstance(urls, str):
             urls = [urls]
 
@@ -132,7 +133,7 @@ class AudioLoader:
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, error = process.communicate()
         if process.returncode != 0:
-            raise RuntimeError(f"Transcription process failed for {wav_file}. Make sure transcription model is available under models/")
+            raise RuntimeError(f"Transcription process failed for {wav_file} with error {error.decode('utf-8')}. Make sure transcription model is available under models/")
 
         decoded_str = output.decode('utf-8').strip()
         processed_str = decoded_str.replace('[BLANK_AUDIO]', '').strip()
