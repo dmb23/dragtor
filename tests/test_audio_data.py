@@ -16,26 +16,25 @@ def test_ffmpeg_availability():
         pytest.fail("ffmpeg is not installed or not available in the system's PATH")
 
 
-def test_llama_server_availability():
-    """Test if llama-server is executable."""
-    result = subprocess.Popen(["llama-server", "--version"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    output, error = result.communicate()
-    print(f"{output=}")
-    print(f"{error=}")
-
-    # try:
-    #     result = subprocess.run(["llama-server", "--version"], shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
-    #     assert result.returncode == 0
-    # except FileNotFoundError:
-    #     pytest.fail("llama-server command cannot be found. Make sure llama.cpp project path is in PATH.")
-
-
 def test_transcribe_exe_availability():
-    """Test if transcribe executable are available in the project."""
-    exe_file = Path(config.conf.project_path) / "transcribe"
+    """Test if transcription function is executable."""
+    exe_file = Path(config.conf.executables.whisper_project) / "main"
 
-    assert exe_file.is_file()
-    assert shutil.which(exe_file) == exe_file
+    # Check if the file exists
+    if not exe_file.is_file():
+        pytest.fail(
+            f"Transcribe executable not found at {exe_file}. Ensure the whisper.cpp project path is configured correctly.")
+
+    # Check if the file is executable
+    if not shutil.which(str(exe_file)):
+        pytest.fail(
+            f"Transcribe executable at {exe_file} is not recognized as executable. Verify permissions and path configuration.")
+
+    try:
+        result = subprocess.run([str(exe_file), "--help"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        assert result.returncode == 0, f"Transcribe executable at {exe_file} failed to run. Error: {result.stderr}"
+    except FileNotFoundError as e:
+        pytest.fail(f"Failed to run whisper.cpp main executable at {exe_file}: {e}")
 
 
 def test_models_availability():
@@ -48,8 +47,8 @@ def test_models_availability():
 
 
 @pytest.fixture
-def setup_audio_loader():
-    audio_loader = AudioLoader(outdir=Path(config.conf.base_path) / config.conf.data.audio_cache)
+def setup_audio_loader(tmp_path):
+    audio_loader = AudioLoader(outdir=tmp_path / "audio_transcript")
     yield audio_loader
 
 @pytest.mark.parametrize(
@@ -84,7 +83,6 @@ def test_transcribe_to_file(setup_audio_loader, test_url, expected_output):
         # Running using incorrect URL
         assert not output_file.exists()
 
-    shutil.rmtree(audio_loader.outdir)
 
 def test_get_audio_cache(setup_audio_loader):
     """Test for transcript retrievals."""
@@ -104,5 +102,3 @@ def test_get_audio_cache(setup_audio_loader):
     assert len(audio_full_texts) == len(sample_transcripts)
     for text in audio_full_texts:
         assert text.startswith("And before he had time")
-
-    shutil.rmtree(audio_loader.outdir)

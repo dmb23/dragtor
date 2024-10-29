@@ -129,7 +129,7 @@ class AudioLoader:
 
     def _transcribe_audio(self, wav_file) -> str:
         """Transcribe .wav audio file using transcription model."""
-        command = f"transcribe -m '{self.model_path}' -f '{str(wav_file)}' -l '{self.language}'"
+        command = f"{config.conf.executables.whisper_project}/main -m '{self.model_path}' -f '{str(wav_file)}' -l '{self.language}'"
         process = subprocess.Popen(command, shell=True, stdout=subprocess.PIPE, stderr=subprocess.PIPE)
         output, error = process.communicate()
         if process.returncode != 0:

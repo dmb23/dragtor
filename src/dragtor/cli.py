@@ -20,7 +20,7 @@ class Cli:
 
     def __init__(self, **kwargs):
         for k, v in kwargs.items():
-            logger.debug(f"updateing {k} with value {v}")
+            logger.debug(f"updating {k} with value {v}")
             OmegaConf.update(config.conf, k, v)
 
     @logger.catch
