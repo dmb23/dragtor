@@ -5,6 +5,7 @@ data/*
 models/*
 tests/assets/chroma_db/*
 tests/assets/checkpoints/*
+tests/assets/audio_transcript/*
 config/credentials*
 .env
 .vscode/

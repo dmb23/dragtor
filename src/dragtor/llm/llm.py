@@ -88,7 +88,7 @@ class LlamaServerHandler:
         self._kwargs.update(self._temp_kwargs)
 
         pieces = [
-            "llama-server",
+            f"{config.conf.executables.llama_project}/llama-server",
         ]
 
         for k, v in self._kwargs.items():

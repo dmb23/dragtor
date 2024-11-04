@@ -1,9 +1,33 @@
 import re
-
+import subprocess
 import pytest
+import shutil
 
+from pathlib import Path
+from dragtor import config
 from dragtor import llm
 from dragtor.utils import Messages
+
+
+def test_llama_server_availability():
+    """Test if llama-server is executable."""
+    exe_file = Path(config.conf.executables.llama_project) / "llama-server"
+
+    # Check if the file exists
+    if not exe_file.is_file():
+        pytest.fail(
+            f"llama-server executable not found at {exe_file}. Ensure the llama.cpp project path is configured correctly.")
+
+    # Check if the file is executable
+    if not shutil.which(str(exe_file)):
+        pytest.fail(
+            f"llama-server executable at {exe_file} is not recognized as executable. Verify permissions and path configuration.")
+
+    try:
+        result = subprocess.run([exe_file, "--version"], stdout=subprocess.PIPE, stderr=subprocess.PIPE)
+        assert result.returncode == 0
+    except FileNotFoundError as e:
+        pytest.fail(f"Failed to run llama-server executable at {exe_file}: {e}")
 
 
 @pytest.fixture(scope="class")
