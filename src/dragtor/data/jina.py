@@ -4,8 +4,6 @@ import requests
 from dragtor import config
 from dragtor.data import DataLoader
 
-STATUS_OK = 200
-
 
 class JinaLoader(DataLoader):
     """Load text content of websites via Jina Reader API.
@@ -31,9 +29,7 @@ class JinaLoader(DataLoader):
         headers = {"Authorization": f"Bearer {api_key}"}
 
         response = requests.get(jina_url, headers=headers)
-
-        if response.status_code != STATUS_OK:
-            raise IOError(response)
+        response.raise_for_status()
 
         return response.text
 
