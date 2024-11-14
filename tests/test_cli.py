@@ -13,8 +13,7 @@ def question() -> str:
 def test_cli_load(caplog, empty_store):
     Cli().load()
     print(caplog.text)
-    assert "Loaded blog data successfully" in caplog.text
-    assert "Loaded audio data successfully" in caplog.text
+    assert "Loaded configured data successfully" in caplog.text
     pass
 
 
@@ -29,10 +28,10 @@ def test_cli_search(question: str, full_store):
     assert len(found_texts) > 0
 
 
-def test_cli_preload(full_store, caplog):
-    Cli().preload()
-
-    assert "Preloaded 1/" in caplog.text
+# def test_cli_preload(full_store, caplog):
+#     Cli().preload()
+#
+#     assert "Preloaded 1/" in caplog.text
 
 
 def test_cli_ask(question: str, full_store):

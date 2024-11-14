@@ -45,7 +45,7 @@ class Cli:
         # full_texts = []
         # for loader in get_all_loaders():
         #     full_texts += loader.get_cache()
-        full_texts = sum([l.get_cache() for l in get_all_loaders()])
+        full_texts = sum([l.get_cache() for l in get_all_loaders()], start=[])
 
         index = get_index()
         index.index_texts(full_texts)
