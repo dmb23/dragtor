@@ -74,7 +74,6 @@ class RecursiveCharacterChunker(Chunker):
     """Use Langchain API for chunking"""
 
     def chunk_and_annotate(self, text: str) -> tuple[list[str], list[tuple[int, int]]]:
-        # TODO: Fix this method. The calculation of the annotations is wrong.
         chunks = []
         annotations = []
 

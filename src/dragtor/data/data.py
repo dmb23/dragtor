@@ -1,8 +1,3 @@
-# TODO: create overarching DataLoader class:
-# - use JinaLoader and / or AudioLoader as needed
-# - uniform interface in config:
-#    - podcasts: -> PODCAST_NAME: -> EPISODE_NAME
-#    - blogs: --> BLOG_URL: -> BLOG_ENTRY
 from abc import ABC, abstractmethod
 from pathlib import Path
 

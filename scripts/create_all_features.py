@@ -312,5 +312,3 @@ if __name__ == "__main__":
 
                     stored_answers[text_id][topic_id][q_text] = answer
                     answers_file.write_text(json.dumps(stored_answers))
-
-# TODO: check how to enforce structured output
