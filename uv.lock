@@ -1,5 +1,5 @@
 version = 1
-requires-python = "==3.11.*"
+requires-python = ">=3.11, <3.12"
 
 [[package]]
 name = "annotated-types"
@@ -263,23 +263,6 @@ dev = [
     { name = "debugpy" },
     { name = "pytest" },
     { name = "ruff" },
-]
-
-[package.metadata]
-requires-dist = [
-    { name = "chromadb", specifier = ">=0.5.5" },
-    { name = "fire", specifier = ">=0.6.0" },
-    { name = "langchain-text-splitters", specifier = ">=0.3.0" },
-    { name = "loguru", specifier = ">=0.7.2" },
-    { name = "omegaconf", specifier = ">=2.3.0" },
-    { name = "sentence-transformers", specifier = ">=3.0.1" },
-]
-
-[package.metadata.requires-dev]
-dev = [
-    { name = "debugpy", specifier = ">=1.8.5" },
-    { name = "pytest", specifier = ">=8.3.2" },
-    { name = "ruff", specifier = ">=0.6.1" },
 ]
 
 [[package]]
