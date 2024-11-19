@@ -1,22 +1,17 @@
-# Base configuration
 base_path: "/Users/mischa/Projects/local/dragtor/data/"
 expose_library_logs: False # allows to use loguru for external loggers
 
-# Data paths
 data:
-  jina_cache: "jina_reader/"
-  hoopers_urls:
+  cache_dir: "cached/"
+  jina_urls:
     - "https://www.hoopersbeta.com/library/a2-pulley-manual-for-climbers"
     - "https://www.hoopersbeta.com/library/weight-training-and-rock-climbing"
     - "https://www.hoopersbeta.com/library/how-to-heal-from-a-lumbrical-injury-5-simple-stages-to-recover"
     - "https://www.hoopersbeta.com/library/flexor-tenosynovitis"
     - "https://www.hoopersbeta.com/library/will-hangboarding-2x/day-improve-your-climbing-ultimate-revised-breakdown"    
-  audio_cache: "audio_transcript/"
-  audio_urls:
-     - "https://cdn-media.huggingface.co/speech_samples/sample2.flac"
-#     - "https://cdn.simplecast.com/audio/8d0e41cc-be61-4d71-ab0d-b985db72bb92/episodes/42685a36-6381-4017-ad34-48fe1822e83e/audio/2c2a3b1c-7b39-4852-a947-6f7ea10dbf98/default_tc.mp3"
+  audio_urls: # name: url
+    "EP 237: Yves Gravelle Returns": https://cdn.simplecast.com/audio/8d0e41cc-be61-4d71-ab0d-b985db72bb92/episodes/5f5ae090-e83f-41f4-971a-606745fee46c/audio/f72232dc-aa71-46de-b77a-2a3188fa7115/default_tc.mp3
 
-# Chunking configuration
 chunking:
   # valid strategies: paragraph [default], jina_tokenizer, recursive_char
   strategy: recursive_char
@@ -24,9 +19,8 @@ chunking:
     max_chunk_length: 1000
   langchain_tokenizer:
     max_chunk_length: 1000
-    chunk_overlap: 0
+    chunk_overlap: 50
 
-# Embeddings configuration
 embeddings:
   # valid strategies: chromadb [default], jina
   strategy: jina
@@ -35,7 +29,6 @@ embeddings:
     # max length: 8192
     max_seq_length: 512
 
-# Storing configuration
 store:
   # valid strategies: chromadb [default]
   strategy: default
@@ -46,13 +39,11 @@ store:
     # valid distances: l2, ip, cosine
     distance: cosine
 
-# Reranker configuration
 reranker:
   # valid strategies: dummy [default], jina
-  strategy: dummy
-  n_ranked: 10
+  strategy: jina
+  n_ranked: 5
 
-# Index configuration
 index:
   # valid strategies: basic [default], late_chunking
   strategy: default
@@ -62,7 +53,7 @@ model:
   # host: 127.0.0.1
   # port: 8080
   file_path: "/Users/mischa/Projects/local/dragtor/models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
-  max_completion_tokens: 512
+  max_completion_tokens: 2048
   kwargs:
     gpu-layers: 15
     ctx-size: 15000
@@ -83,21 +74,18 @@ prompts:
 
     answer:
 
-# Server configuration
 server:
   backoff: 1.0
 
-# Evaluation configuration
 eval:
-  eval_dir: "eval"
+  eval_dir: "eval/"
   eval_answers: "gold_answers.json"
 
-# Audio configuration
 audio:
   model: "/Users/mischa/Projects/local/dragtor/models/ggml-base.en.bin"
   lang: "en"
 
 # Paths to external projects containing executables
 executables:
-  llama_project: "/Users/mischa/Projects/local/llama.cpp"
+  llama_project: "/Users/mischa/Projects/local/llama-cpp/llama.cpp"
   whisper_project: "/Users/mischa/Projects/local/whisper.cpp"

@@ -1,15 +1,11 @@
-from pathlib import Path
-from typing import Iterable
-
 from loguru import logger
 import requests
 
 from dragtor import config
+from dragtor.data import DataLoader
 
-STATUS_OK = 200
 
-
-class JinaLoader:
+class JinaLoader(DataLoader):
     """Load text content of websites via Jina Reader API.
 
     This saves the hassle of parsing content of websites manually.
@@ -18,13 +14,10 @@ class JinaLoader:
     Requires `creds.jina` as a key in configuration (credentials.yml) with an API key
     """
 
-    def __init__(self, outdir=None):
+    def __init__(self, *args, **kwargs):
+        kwargs.update({"cache_glob": "jina_*.md"})
+        super().__init__(*args, **kwargs)
         self._jina_base: str = "https://r.jina.ai/"
-        self.outdir: Path
-        if outdir:
-            self.outdir = Path(outdir)
-        else:
-            self.outdir = Path(config.conf.base_path) / config.conf.data.jina_cache
 
     def _load_jina_reader(self, url: str) -> str:
         try:
@@ -36,23 +29,20 @@ class JinaLoader:
         headers = {"Authorization": f"Bearer {api_key}"}
 
         response = requests.get(jina_url, headers=headers)
-
-        if response.status_code != STATUS_OK:
-            raise IOError(response)
+        response.raise_for_status()
 
         return response.text
 
-    def load_jina_to_cache(self, urls: Iterable[str] | str) -> None:
+    def load_to_cache(self) -> None:
         """Load text from Jina Reader API for a list of URLs and cache to files"""
-        if not self.outdir.is_dir():
-            self.outdir.mkdir(parents=True)
-
+        urls = config.conf.data.jina_urls
         if isinstance(urls, str):
             urls = [urls]
+        logger.debug(f"loading jina reader urls:\n{urls}")
 
         counter = 0
         for url in urls:
-            fpath = self.outdir / f"jina_{url.replace('/', '_')}.md"
+            fpath = self._cache_dir / f"jina_{url.replace('/', '_')}.md"
             try:
                 fpath.read_text(encoding="utf8")
                 logger.debug(f"Already cached {url}")
@@ -63,12 +53,3 @@ class JinaLoader:
                 counter += 1
 
         logger.info(f"Loaded {counter} urls via Jina Reader API")
-
-    def get_cache(self) -> list[str]:
-        """Get all previously cached text that was loaded to file"""
-        full_texts = []
-        for fpath in self.outdir.glob("*.md"):
-            logger.info(f"loading cached file {fpath}")
-            full_texts.append(fpath.read_text(encoding="utf8"))
-
-        return full_texts

@@ -1,7 +1,7 @@
 from abc import ABC, abstractmethod
 
-import requests
 from langchain_text_splitters import RecursiveCharacterTextSplitter
+import requests
 
 from dragtor import config
 
@@ -69,8 +69,10 @@ class JinaTokenizerChunker(Chunker):
 
         return chunks, span_annotations
 
+
 class RecursiveCharacterChunker(Chunker):
     """Use Langchain API for chunking"""
+
     def chunk_and_annotate(self, text: str) -> tuple[list[str], list[tuple[int, int]]]:
         chunks = []
         annotations = []
@@ -78,7 +80,7 @@ class RecursiveCharacterChunker(Chunker):
         recursive_text_splitter = RecursiveCharacterTextSplitter(
             # Follow config's max chunk length
             chunk_size=config.conf.select("chunking.langchain_tokenizer.max_chunk_length", 1000),
-            chunk_overlap=config.conf.select("chunking.langchain_tokenizer.chunk_overlap", 0),
+            chunk_overlap=config.conf.select("chunking.langchain_tokenizer.chunk_overlap", 50),
             length_function=len,
             is_separator_regex=False,
         )
@@ -86,17 +88,17 @@ class RecursiveCharacterChunker(Chunker):
         # Start the count for annotation
         start_position = 0
         for chunk in recursive_text_splitter.split_text(text):
-            # End annotation for each chunk
-            end_position = start_position + len(chunk)
+            # need to search for the chunk, overlap can be variable
+            chunk_start = text.find(chunk, start_position)
+            chunk_end = chunk_start + len(chunk)
+            assert text[chunk_start:chunk_end] == chunk
 
             # Append the list for all chunks & annotation
             chunks.append(chunk)
-            annotations.append(
-                (start_position, end_position)
-            )
+            annotations.append((chunk_start, chunk_end))
 
             # Update start_position value to end position, with excluding overlap
-            start_position = end_position - recursive_text_splitter._chunk_overlap
+            start_position = chunk_end - recursive_text_splitter._chunk_overlap
 
         return chunks, annotations
 

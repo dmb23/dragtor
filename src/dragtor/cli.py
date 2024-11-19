@@ -4,12 +4,12 @@ import fire
 from loguru import logger
 from omegaconf import OmegaConf
 
-from dragtor import config, data, audio_loader
+from dragtor import config
+from dragtor.data import get_all_loaders
 from dragtor.index.index import get_index
 from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor
 from dragtor.llm.evaluation import EvaluationSuite, QuestionEvaluator
-from dragtor.utils import ident
 
 
 class Cli:
@@ -26,15 +26,9 @@ class Cli:
     @logger.catch
     def load(self):
         """Load remote data to local files for further processing"""
-        urls = config.conf.data.hoopers_urls
-        logger.debug(f"loading the urls:\n{urls}")
-        data.JinaLoader().load_jina_to_cache(urls)
-        logger.info("Loaded blog data successfully")
-
-        audio_urls = config.conf.data.audio_urls
-        logger.debug(f"loading audio urls:\n{audio_urls}")
-        audio_loader.AudioLoader().load_audio_to_cache(urls=audio_urls)
-        logger.info("Loaded audio data successfully")
+        for loader in get_all_loaders():
+            loader.load_to_cache()
+        logger.info("Loaded configured data successfully")
 
     def clear_index(self):
         """Reset all data already in the index"""
@@ -48,27 +42,28 @@ class Cli:
     @logger.catch
     def index(self):
         """Create a Vector Store of embeddings of all loaded sources for retrieval"""
-        loader = data.JinaLoader()
-        audio = audio_loader.AudioLoader()
-        full_texts = loader.get_cache() + audio.get_audio_cache()
+        # full_texts = []
+        # for loader in get_all_loaders():
+        #     full_texts += loader.get_cache()
+        full_texts = sum([l.get_cache() for l in get_all_loaders()], start=[])
 
         index = get_index()
         index.index_texts(full_texts)
         logger.info("Indexed all cached data successfully")
 
-    @logger.catch
-    def preload(self):
-        """Create pre-loaded state files for all loaded sources for retrieval"""
-        loader = data.JinaLoader()
-        full_texts = loader.get_cache()
-
-        ld = LocalDragtor()
-        for i, text in enumerate(full_texts):
-            text_id = ident(text)
-            messages = ld._to_messages(question="", context=text)
-            filename = f"{text_id}.bin"
-            ld.llm.store_state(messages, filename)
-            logger.info(f"Preloaded {i+1}/{len(full_texts)} texts")
+    # @logger.catch
+    # def preload(self):
+    #     """Create pre-loaded state files for all loaded sources for retrieval"""
+    #     loader = data.JinaLoader()
+    #     full_texts = loader.get_cache()
+    #
+    #     ld = LocalDragtor()
+    #     for i, text in enumerate(full_texts):
+    #         text_id = ident(text)
+    #         messages = ld._to_messages(question="", context=text)
+    #         filename = f"{text_id}.bin"
+    #         ld.llm.store_state(messages, filename)
+    #         logger.info(f"Preloaded {i+1}/{len(full_texts)} texts")
 
     @logger.catch
     def search(self, question: str) -> str:

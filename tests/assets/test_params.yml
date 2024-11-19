@@ -1,12 +1,11 @@
 project_path: "/Users/mischa/Projects/local/dragtor"
 base_path: "/Users/mischa/Projects/local/dragtor/tests/assets"
 data:
-  jina_cache: "jina_reader/"
-  hoopers_urls:
+  cache_dir: "cached/"
+  jina_urls:
     - "test_blog"
-  audio_cache: "audio_transcript/"
   audio_urls:
-    - "https://cdn-media.huggingface.co/speech_samples/sample2.flac"
+    "HF sample": "https://cdn-media.huggingface.co/speech_samples/sample2.flac"
 embeddings:
   strategy: default
 store:
