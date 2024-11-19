@@ -12,7 +12,6 @@ def question() -> str:
 
 def test_cli_load(caplog, empty_store):
     Cli().load()
-    print(caplog.text)
     assert "Loaded configured data successfully" in caplog.text
     pass
 
