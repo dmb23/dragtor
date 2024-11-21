@@ -2,6 +2,32 @@
 
 ## Current Plan
 
+How can I include Agentic processes in dRAGtor?
+
+- Initial Question
+- -> model decides where to send it to
+- Option 1: Metadata selection
+    - Tool: get Podcast episodes
+    - Tool: get blog posts titles
+- Option 2: RAG
+    - Tool: get Rag Snippets
+    - Tool: get full text
+
+Possible Questions:
+- How many sets recommends Yves Gravelle to do of a certain lift?
+- How should I rehab a mild A2 pulley strain?
+- which episodes of the nugget climbing podcast could inform about active flexion finger training?
+
+Approach:
+- Set up a Script / Marimo Notebook
+- define a tool for RAG retrieval
+- set up a minimal ReAct Prompt & Loop
+- see what that means and what comes after
+
+---
+
+### state 3 weeks ago
+
 - ✅ figure out how to use [[#Model Checkpoints]] and decide how to continue for now:
     - ✅I can continue to use the `llama-server` command and manage slot state
     - ✅that means I can continue to use the easy interface via chat messages with better message ending
