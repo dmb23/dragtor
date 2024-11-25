@@ -7,12 +7,11 @@ from enum import Enum
 import os
 from typing import Annotated, TypedDict
 
-from langchain_core.messages import HumanMessage
+from langchain_core.messages import AIMessage, HumanMessage
 from langchain_groq import ChatGroq
 from langgraph.checkpoint.memory import MemorySaver
 from langgraph.graph import StateGraph
 from langgraph.graph.message import add_messages
-from langgraph.graph.state import END
 from loguru import logger
 from pydantic import BaseModel
 
@@ -64,17 +63,31 @@ def generate_answer(state: State) -> dict:
     loop_step = state.get("loop_step", 0)
 
     question = state["question"]
+    logger.debug(f"Question: {question}")
+
     context = "\n\n".join(state["documents"])
+    logger.debug(f"Context: {context}")
+
     messages = dragtor._to_messages(question, context)
     answer = dragtor.llm.chat_llm(messages)
 
+    logger.debug(f"proposed answer: {answer}")
+
     return {"answer": answer, "loop_step": loop_step + 1}
+
+
+def send_message(state: State) -> dict:
+    """Accept the generated answer and send it back as AIMessage"""
+    logger.info("Sending generated answer as message")
+    new_message = AIMessage(content=state["answer"])
+
+    return {"messages": [new_message]}
 
 
 def check_answer(state: State) -> str:
     """edge function: only returns a string"""
     if state.get("loop_step", 0) >= 2:
-        logger.info("Max retries reached - stopping")
+        logger.warning("Max retries reached - stopping")
         return "max_retries"
 
     system_prompt = """
@@ -119,14 +132,12 @@ Return JSON with two two keys, binary_score is 'factual' or 'wrong' score to ind
     grading_model = model.with_structured_output(Grading)
     response = grading_model.invoke(messages.format())
 
-    logger.debug(response)
-
     grading = Grading.model_validate(response)
 
     if grading.binary_score == Score.FACTUAL:
-        logger.info(f"Factual answer: {grading.explanation}")
+        logger.debug(f"Factual answer: {grading.explanation}")
     else:
-        logger.info(f"Wrong answer: {grading.explanation}")
+        logger.debug(f"Wrong answer: {grading.explanation}")
 
     return grading.binary_score.name
 
@@ -136,15 +147,16 @@ if __name__ == "__main__":
 
     graph_builder.add_node("retrieve_documents", retrieve_documents)
     graph_builder.add_node("generate_answer", generate_answer)
-    # TODO: graph_builder.add_node("answer_message", answer_message)
+    graph_builder.add_node("send_message", send_message)
 
     graph_builder.set_entry_point("retrieve_documents")
     graph_builder.add_edge("retrieve_documents", "generate_answer")
     graph_builder.add_conditional_edges(
         "generate_answer",
         check_answer,
-        {"max_retries": END, "FACTUAL": END, "WRONG": "generate_answer"},
+        {"max_retries": "send_message", "FACTUAL": "send_message", "WRONG": "generate_answer"},
     )
+    graph_builder.set_finish_point("send_message")
 
     memory = MemorySaver()
     app = graph_builder.compile(checkpointer=memory)
@@ -155,5 +167,9 @@ if __name__ == "__main__":
     inputs = {"messages": [HumanMessage(content=question)]}
 
     events = app.stream(inputs, config, stream_mode="values")
+    current_id = ""
     for event in events:
-        event["messages"][-1].pretty_print()
+        # an event in this case is the current snapshot of the state...
+        if event["messages"][-1].id != current_id:
+            event["messages"][-1].pretty_print()
+            current_id = event["messages"][-1].id

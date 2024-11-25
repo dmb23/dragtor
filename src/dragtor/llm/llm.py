@@ -76,6 +76,7 @@ class LlamaServerHandler:
                 "host": self._host,
                 "port": self._port,
                 "slot_save_path": str(self._checkpoint_dir.resolve()),
+                "log_disable": True,
             }
         )
 
@@ -92,6 +93,7 @@ class LlamaServerHandler:
         ]
 
         for k, v in self._kwargs.items():
+            k = k.replace("_", "-")
             if type(v) is bool:
                 if v:
                     pieces.extend([f"--{k}"])
@@ -105,7 +107,7 @@ class LlamaServerHandler:
     def __enter__(self):
         _cmd = self._build_server_command()
         logger.debug(f"starting Llama server with command {_cmd}")
-        self.p = subprocess.Popen(_cmd, shell=True)
+        self.p = subprocess.Popen(_cmd, shell=True, stderr=subprocess.DEVNULL)
         sleep(0.5)
 
     def __exit__(self, exc_type, exc_value, traceback):
