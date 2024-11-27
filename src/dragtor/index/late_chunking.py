@@ -2,6 +2,7 @@ from dataclasses import dataclass, field
 from pathlib import Path
 
 import chromadb.api
+import numpy as np
 from transformers import AutoModel, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
 
 from dragtor.config import conf
@@ -50,6 +51,27 @@ class LateChunkingIndex:
         self.embedding_model = AutoModel.from_pretrained(
             "jinaai/jina-embeddings-v3", trust_remote_code=True
         )
+
+    def _tokenize_and_map_boundaries(self, text: str, chunk_annotations: list[tuple[int, int]], offsets: np.ndarray):
+        # Convert chunk annotations to NumPy arrays
+        chunk_annotations = np.array(chunk_annotations)
+
+        # Find start token indices
+        start_conditions = (offsets[:, 0][:, np.newaxis] <= chunk_annotations[:, 0]) & (offsets[:, 1][:, np.newaxis] > chunk_annotations[:, 0])
+        start_tokens = np.argmax(start_conditions, axis=0)
+
+        # Find end token indices
+        end_conditions = (offsets[:, 0][:, np.newaxis] < chunk_annotations[:, 1]) & (offsets[:, 1][:, np.newaxis] >= chunk_annotations[:, 1])
+        end_tokens = np.argmax(end_conditions, axis=0) + 1  # end_token is exclusive
+
+        # Check for any unmapped boundaries
+        if not np.all(start_conditions[start_tokens, np.arange(len(chunk_annotations))]):
+            raise ValueError("Could not map some chunk boundaries to tokens.")
+        if not np.all(end_conditions[end_tokens - 1, np.arange(len(chunk_annotations))]):
+            raise ValueError("Could not map some chunk boundaries to tokens.")
+
+        token_chunk_annotations = list(zip(start_tokens, end_tokens))
+        return token_chunk_annotations
 
     # def _calculate_late_embeddings_v2(self, input_text: str):
     #     # TODO: check the logic around a max length
