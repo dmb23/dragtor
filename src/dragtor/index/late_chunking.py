@@ -51,19 +51,6 @@ class LateChunkingIndex:
             "jinaai/jina-embeddings-v3", trust_remote_code=True
         )
 
-    # def index_texts(self, texts: list[str]) -> None:
-    #     all_chunks, all_ids, all_embeddings = [], [], []
-    #     for text in texts:
-    #         chunks, _ = self.chunker.chunk_and_annotate(text)
-    #         embeddings = self._calculate_late_embeddings_v2(text)
-    #         ids = [ident(chunk) for chunk in chunks]
-    #
-    #         all_chunks.extend(chunks)
-    #         all_ids.extend(ids)
-    #         all_embeddings.extend(embeddings)
-    #
-    # self.store.collection.add(documents=all_chunks, ids=all_ids, embeddings=all_embeddings)
-
     # def _calculate_late_embeddings_v2(self, input_text: str):
     #     # TODO: check the logic around a max length
     #     # what happens when I want to embed a text that is longer than my embedding model can handle?
@@ -92,6 +79,19 @@ class LateChunkingIndex:
     #     pooled_embeddings = [embedding.detach().cpu().tolist() for embedding in pooled_embeddings]
     #
     #     return pooled_embeddings
+
+    # def index_texts(self, texts: list[str]) -> None:
+    #     all_chunks, all_ids, all_embeddings = [], [], []
+    #     for text in texts:
+    #         chunks, _ = self.chunker.chunk_and_annotate(text)
+    #         embeddings = self._calculate_late_embeddings_v2(text)
+    #         ids = [ident(chunk) for chunk in chunks]
+    #
+    #         all_chunks.extend(chunks)
+    #         all_ids.extend(ids)
+    #         all_embeddings.extend(embeddings)
+    #
+    # self.store.collection.add(documents=all_chunks, ids=all_ids, embeddings=all_embeddings)
 
     # def query(self, question: str) -> list[str]:
     #     n_results = conf.select("store.n_query", default=5)
