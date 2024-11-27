@@ -7,7 +7,6 @@ from omegaconf import OmegaConf
 from dragtor import config
 from dragtor.data import get_all_loaders
 from dragtor.index.index import get_index
-from dragtor.index.store import ChromaDBStore
 from dragtor.llm import LocalDragtor
 from dragtor.llm.evaluation import EvaluationSuite, QuestionEvaluator
 
@@ -33,11 +32,12 @@ class Cli:
     def clear_index(self):
         """Reset all data already in the index"""
         index = get_index()
-        if type(index.store) is not ChromaDBStore:
-            raise ValueError("clear_index only works for a Chroma DB Store!")
 
-        for c in index.store.client.list_collections():
-            index.store.client.delete_collection(c.name)
+        try:
+            for c in index.store.client.list_collections():  # ruff: noqa:
+                index.store.client.delete_collection(c.name)
+        except AttributeError:
+            raise ValueError("clear_index only works for a Chroma DB Store!")
 
     @logger.catch
     def index(self):

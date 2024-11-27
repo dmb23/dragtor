@@ -8,16 +8,15 @@ from loguru import logger
 
 from dragtor import config
 from dragtor.index import RetrievalError
+from dragtor.index.chunk import Chunker, get_chunker
 from dragtor.index.embed import Embedder, get_embedder
 from dragtor.utils import ident
 
 
 @dataclass
 class VectorStore(ABC):
-    embedder: Embedder
-
     @abstractmethod
-    def add_chunks(self, chunks: list[str]) -> None:
+    def add_documents(self, documents: list[str], metadata: list[dict] | None = None) -> None:
         pass
 
     @abstractmethod
@@ -28,7 +27,7 @@ class VectorStore(ABC):
 def _build_collection_name() -> str:
     chunk_strat = config.conf.select("chunking.strategy", default="jina_line")
     embed_strat = config.conf.select("embeddings.strategy", default="chromadb")
-    rerank_strat = config.conf.select("embeddings.strategy", default="no_rerank")
+    rerank_strat = config.conf.select("reranker.strategy", default="no_rerank")
 
     return "__".join([chunk_strat, embed_strat, rerank_strat])
 
@@ -38,7 +37,9 @@ def _get_default_db_directory() -> str:
 
 
 @dataclass
-class ChromaDBStore(VectorStore):
+class BasicChromaStore(VectorStore):
+    chunker: Chunker = field(default_factory=get_chunker)
+    embedder: Embedder = field(default_factory=get_embedder)
     _db_path: str = field(default_factory=_get_default_db_directory)
     client: chromadb.api.ClientAPI = field(init=False)
     collection: chromadb.Collection = field(init=False)
@@ -61,15 +62,17 @@ class ChromaDBStore(VectorStore):
         )
         logger.debug(f"Collection contains initially {len(self.collection.get()['ids'])} items.")
 
-    def add_chunks(self, chunks: list[str]) -> None:
-        n_init = len(self.collection.get()["ids"])
+    def add_documents(self, documents: list[str], metadata: list[dict] | None = None) -> None:
+        chunks = self.chunker.chunk_texts(documents)
+        n_init = self.collection.count()
         chunks = list(set(chunks))
         ids = [ident(chunk) for chunk in chunks]
         embeddings = self.embedder.ef(chunks)
         self.collection.add(documents=chunks, ids=ids, embeddings=embeddings)
-        n_post = len(self.collection.get()["ids"])
+        n_post = self.collection.count()
         logger.debug(
-            f"Tried to add {len(chunks)} new elements to collection, size increased from {n_init} to {n_post}"
+            f"Tried to add {len(chunks)} new elements to collection, "
+            f"size increased from {n_init} to {n_post}"
         )
 
     def query(self, question: str, n_results: int = 5) -> list[str]:
@@ -84,10 +87,10 @@ class ChromaDBStore(VectorStore):
         return documents
 
 
-def get_store() -> ChromaDBStore:
+def get_store() -> VectorStore:
     match strat := config.conf.select("store.strategy", default="default"):
         case "chromadb" | "default":
-            embedder = get_embedder()
-            return ChromaDBStore(embedder)
+            return BasicChromaStore()
         case _:
             raise RetrievalError(f"Unknown strategy for Vector Store: {strat}")
+

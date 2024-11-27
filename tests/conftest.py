@@ -67,8 +67,8 @@ Causes
 
 
 @pytest.fixture
-def empty_store() -> store.ChromaDBStore:
-    vstore = store.get_store()
+def empty_store() -> store.BasicChromaStore:
+    vstore = store.BasicChromaStore()
     if vstore.client.count_collections() > 1:
         for collection in vstore.client.list_collections():
             if collection.name != vstore.collection.name:
@@ -80,7 +80,7 @@ def empty_store() -> store.ChromaDBStore:
 
 
 @pytest.fixture
-def full_store(empty_store: store.ChromaDBStore, example_text: str) -> store.ChromaDBStore:
-    empty_store.add_chunks(example_text.split("\n\n"))
+def full_store(empty_store: store.BasicChromaStore, example_text: str) -> store.BasicChromaStore:
+    empty_store.add_documents(example_text.split("\n\n"))
 
     return empty_store

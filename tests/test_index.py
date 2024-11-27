@@ -1,5 +1,8 @@
-from dragtor.index.index import BasicIndex, LateChunkingIndex
 import pytest
+
+from dragtor.index.index import BasicIndex
+from dragtor.index.rerank import get_reranker
+from dragtor.index.store import BasicChromaStore
 
 
 @pytest.fixture
@@ -12,33 +15,18 @@ def annotations() -> list[tuple[int, int]]:
     return [(0, 8), (8, 23)]
 
 
-# @pytest.mark.parametrize("IndexClass", [BasicIndex, LateChunkingIndex])
-# TODO: fix LateChunkingIndex
-@pytest.mark.parametrize("IndexClass", [BasicIndex])
-class TestIndex:
-    def test_index_loading(self, IndexClass, text: str, empty_store):
-        i = IndexClass.from_defaults()
-        chunks, _ = i.chunker.chunk_and_annotate(text)
+def test_basic_index_loading(text: str, empty_store: BasicChromaStore):
+    i = BasicIndex(empty_store, get_reranker())
+    chunks, _ = empty_store.chunker.chunk_and_annotate(text)
 
-        i.index_texts([text])
-        assert i.store.collection.count() == len(chunks)
-
-    def test_index_query(self, IndexClass, text: str, full_store):
-        i = IndexClass.from_defaults()
-        i.index_texts([text])
-
-        res = i.query("empty query prompt")
-        assert len(res) > 0
-        assert type(res) is not str
+    i.index_texts([text])
+    assert empty_store.collection.count() == len(chunks)
 
 
-@pytest.mark.skip(reason="Late Chunking is not finished")
-def test_late_embeddings(text):
-    i = LateChunkingIndex.from_defaults()
+def test_basic_index_query(text: str, full_store):
+    i = BasicIndex(full_store, get_reranker())
+    i.index_texts([text])
 
-    chunks, _ = i.chunker.chunk_and_annotate(text)
-    chunk_embeddings = i._calculate_late_embeddings_v2(text)
-
-    assert len(chunk_embeddings) == len(chunks)
-    for emb in chunk_embeddings:
-        assert emb.shape[0] == 1
+    res = i.query("empty query prompt")
+    assert len(res) > 0
+    assert type(res) is list and type(res[0]) is str
