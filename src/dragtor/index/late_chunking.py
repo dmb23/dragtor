@@ -14,8 +14,6 @@ from dragtor.index.chunk import Chunker, get_chunker
 from dragtor.index.rerank import Reranker, get_reranker
 from dragtor.utils import ident
 
-CHUNK_COLLECTION_NAME = "chunks"
-
 
 @dataclass
 class LateChunkingIndex:
@@ -48,6 +46,8 @@ class LateChunkingIndex:
     embedding_model: PreTrainedModel = field(init=False)
     chunker: Chunker = field(default_factory=get_chunker)
     reranker: Reranker = field(default_factory=get_reranker)
+
+    chunk_collection_name: str = "chunks"
 
     def __post_init__(self):
         self._db_path = str(Path(conf.base_path) / conf.store.chromadb.path)
@@ -144,7 +144,7 @@ class LateChunkingIndex:
             all_embeddings.extend(embeddings)
 
         # Store the chunks, ids, embeddings, and token_chunk_annotations in the vector store
-        self.collection(CHUNK_COLLECTION_NAME).add(
+        self.collection(self.chunk_collection_name).add(
             documents=all_chunks,
             ids=all_ids,
             embeddings=all_embeddings,
@@ -160,7 +160,7 @@ class LateChunkingIndex:
             _do_rerank = False
 
         q_embedding = self.embedding_model.encode(question, task=task)
-        search_result = self.collection(CHUNK_COLLECTION_NAME).query(
+        search_result = self.collection(self.chunk_collection_name).query(
             query_embeddings=[q_embedding], n_results=n_results
         )
         try:
