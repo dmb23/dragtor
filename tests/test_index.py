@@ -1,8 +1,7 @@
 import numpy as np
 import pytest
 
-from dragtor.index.index import BasicIndex
-from dragtor.index.late_chunking import LateChunkingIndex
+from dragtor.index.index import BasicIndex, LateChunkingIndex
 from dragtor.index.rerank import get_reranker
 from dragtor.index.store import BasicChromaStore
 
@@ -35,7 +34,7 @@ def test_basic_index_query(text: str, full_store):
 
 
 @pytest.fixture
-def late_chunking_index():
+def late_chunking_index(empty_store):
     return LateChunkingIndex()
 
 

@@ -14,10 +14,10 @@ data:
 
 chunking:
   # valid strategies: paragraph [default], jina_tokenizer, recursive_char
-  strategy: recursive_char
+  strategy: recursive_character
   jina_tokenizer:
     max_chunk_length: 1000
-  langchain_tokenizer:
+  recursive_character:
     max_chunk_length: 1000
     chunk_overlap: 50
 
@@ -27,7 +27,7 @@ embeddings:
   jina:
     device: mps
     # max length: 8192
-    max_seq_length: 512
+    max_seq_length: 2048
 
 store:
   # valid strategies: chromadb [default]
@@ -46,7 +46,7 @@ reranker:
 
 index:
   # valid strategies: basic [default], late_chunking
-  strategy: default
+  strategy: late_chunking
 
 # LLM model configuration
 model:

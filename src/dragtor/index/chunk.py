@@ -76,8 +76,8 @@ class RecursiveCharacterChunker(Chunker):
     def __init__(self):
         self.splitter = RecursiveCharacterTextSplitter(
             # Follow config's max chunk length
-            chunk_size=config.conf.select("chunking.langchain_tokenizer.max_chunk_length", 1000),
-            chunk_overlap=config.conf.select("chunking.langchain_tokenizer.chunk_overlap", 50),
+            chunk_size=config.conf.select("chunking.recursive_character.max_chunk_length", 1000),
+            chunk_overlap=config.conf.select("chunking.recursive_character.chunk_overlap", 50),
             length_function=len,
             is_separator_regex=False,
         )
@@ -110,7 +110,7 @@ def get_chunker() -> Chunker:
             return ParagraphChunker()
         case "jina_tokenizer":
             return JinaTokenizerChunker()
-        case "recursive_char":
+        case "recursive_character":
             return RecursiveCharacterChunker()
         case _:
             raise config.ConfigurationError(
