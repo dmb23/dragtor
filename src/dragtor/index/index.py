@@ -25,7 +25,12 @@ from loguru import logger
 import numpy as np
 import torch
 import torch.nn.functional as F
-from transformers import AutoModel, AutoTokenizer, PreTrainedModel, PreTrainedTokenizer
+from transformers import (
+    AutoModel,
+    AutoTokenizer,
+    PreTrainedModel,
+    PreTrainedTokenizer,
+)
 
 from dragtor import config
 from dragtor.config import conf
@@ -172,10 +177,32 @@ class LateChunkingIndex(Index):
         token_chunk_annotations = list(zip(start_tokens, end_tokens))
         return token_chunk_annotations
 
+    def _get_long_token_embeddings(self, model_inputs):
+        task = "retrieval.passage"
+        task_id = self.embedding_model._adaptation_map[task]
+
+        max_seq_length = config.conf.get("embeddings.jina.max_seq_length", 2048)
+
+        # only single string `input_text`
+        adapter_mask = torch.full((1,), task_id, dtype=torch.int32)
+
+        if len(model_inputs["token_ids"]) <= max_seq_length:
+            with torch.no_grad():
+                model_output = self.embedding_model(**model_inputs, adapter_mask=adapter_mask)
+
+            token_embeddings = model_output["last_hidden_state"].squeeze(0).float()
+
+        else:
+            # TODO: chunk tokens with overlap, embed the chunks, and combine the embeddings correctly
+            pass
+
+        return token_embeddings
+
     def _calculate_late_embeddings(
         self, input_text: str, chunk_annotations: list[tuple[int, int]]
     ) -> list[list[float]]:
         # TODO: this will break if the input_text is longer than the capacity of the embedding model
+
         task = "retrieval.passage"
         task_id = self.embedding_model._adaptation_map[task]
         task_prefix = self.embedding_model._task_instructions[task]
@@ -183,18 +210,12 @@ class LateChunkingIndex(Index):
         inputs = self.tokenizer(
             task_prefix + input_text, return_tensors="pt", return_offsets_mapping=True
         )
-        if len(inputs["input_ids"]) > config.conf.get("embeddings.jina.max_seq_length", 2048):
-            logger.debug("TODO: input is too long for late chunking!")
 
-        # only single string `input_text`
-        adapter_mask = torch.full((1,), task_id, dtype=torch.int32)
-        with torch.no_grad():
-            model_output = self.embedding_model(**inputs, adapter_mask=adapter_mask)
+        token_embeddings = self._get_long_token_embeddings(inputs["input_ids"])
 
+        # task prefix was added for Jina v3, correct for that
         token_offsets = inputs["offset_mapping"].squeeze(0).numpy() - len(task_prefix)
         token_chunk_annotations = self._map_chunks_to_tokens(chunk_annotations, token_offsets)
-
-        token_embeddings = model_output["last_hidden_state"].squeeze(0).float()
 
         pooled_embeddings = [
             token_embeddings[start:end].sum(dim=0) / (end - start)
