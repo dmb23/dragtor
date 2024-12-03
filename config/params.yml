@@ -47,6 +47,10 @@ reranker:
 index:
   # valid strategies: basic [default], late_chunking
   strategy: late_chunking
+  late_chunking:
+    long_seq_length: 2048
+    long_seq_overlap: 256
+
 
 # LLM model configuration
 model:

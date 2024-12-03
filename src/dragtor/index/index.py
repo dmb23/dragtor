@@ -181,7 +181,7 @@ class LateChunkingIndex(Index):
         task = "retrieval.passage"
         task_id = self.embedding_model._adaptation_map[task]
 
-        max_seq_length = config.conf.get("embeddings.jina.max_seq_length", 2048)
+        max_seq_length = config.conf.get("index.late_chunking.long_seq_length", 2048)
 
         # only single string `input_text`
         adapter_mask = torch.full((1,), task_id, dtype=torch.int32)
@@ -193,18 +193,51 @@ class LateChunkingIndex(Index):
             token_embeddings = model_output["last_hidden_state"].squeeze(0).float()
 
         else:
-            # TODO: chunk tokens with overlap, embed the chunks, and combine the embeddings correctly
-            pass
+            # Split tokens into overlapping chunks
+            overlap = config.conf.get("index.late_chunking.long_seq_overlap", 256)
+            chunks = []
+            chunk_embeddings = []
+
+            # Create chunks with overlap
+            for i in range(0, len(model_inputs["token_ids"]), max_seq_length - overlap):
+                chunk = {
+                    k: v[:, i : i + max_seq_length] if isinstance(v, torch.Tensor) else v
+                    for k, v in model_inputs.items()
+                }
+                chunks.append(chunk)
+
+            # Get embeddings for each chunk
+            for chunk in chunks:
+                with torch.no_grad():
+                    chunk_output = self.embedding_model(**chunk, adapter_mask=adapter_mask)
+                chunk_embeddings.append(chunk_output["last_hidden_state"].squeeze(0).float())
+
+            # Combine embeddings from overlapping regions by averaging
+            # NOTE: reference implementation of Jina only uses the embeddings of the later chunk
+            # https://github.com/jina-ai/late-chunking/blob/main/chunked_pooling/mteb_chunked_eval.py#L128
+            token_embeddings = torch.zeros(
+                (len(model_inputs["token_ids"][0]), chunk_embeddings[0].shape[1]),
+                dtype=chunk_embeddings[0].dtype,
+            )
+
+            counts = torch.zeros(len(model_inputs["token_ids"][0]), dtype=torch.int)
+
+            pos = 0
+            for chunk_emb in chunk_embeddings:
+                chunk_size = chunk_emb.shape[0]
+                token_embeddings[pos : pos + chunk_size] += chunk_emb
+                counts[pos : pos + chunk_size] += 1
+                pos += max_seq_length - overlap
+
+            # Average overlapping regions
+            token_embeddings = token_embeddings / counts.unsqueeze(1)
 
         return token_embeddings
 
     def _calculate_late_embeddings(
         self, input_text: str, chunk_annotations: list[tuple[int, int]]
     ) -> list[list[float]]:
-        # TODO: this will break if the input_text is longer than the capacity of the embedding model
-
         task = "retrieval.passage"
-        task_id = self.embedding_model._adaptation_map[task]
         task_prefix = self.embedding_model._task_instructions[task]
 
         inputs = self.tokenizer(
