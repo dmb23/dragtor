@@ -2,7 +2,24 @@
 
 ## Current Plan
 
-How can I include Agentic processes in dRAGtor?
+- [x] make sure that late chunking indexing works (stores chunks, allows for retrieval)
+- [ ] include a small `podcast_search podcast_name episode` verb in the cli to easily update the config and get more episodes
+- [ ] start storing metadata
+    - documents -> id, title, persons
+    - chunks -> parent document
+
+## Possible tasks
+
+- extend the metadata, use it (graphRAG) ?
+    - entity extraction as a first step, then possibly checking the query for entities?
+- [ ] use dsPy for prompts
+    - use Ragas for tuning metrics
+        - generate references via Anthropic / Groq?
+- [ ] [#Task: Include agentic processes in dRAGtor]
+
+---
+
+### Task: Include agentic processes in dRAGtor
 
 - Initial Question
 - -> model decides where to send it to
@@ -23,8 +40,6 @@ Approach:
 - define a tool for RAG retrieval
 - set up a minimal ReAct Prompt & Loop
 - see what that means and what comes after
-
----
 
 ### state 3 weeks ago
 
