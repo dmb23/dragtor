@@ -178,15 +178,20 @@ class LateChunkingIndex(Index):
         return token_chunk_annotations
 
     def _get_long_token_embeddings(self, model_inputs):
+        """Handle inputs that might be longer than the embedding model can handle.
+
+        Jina uses lower long-chunk sizes than the 8K tokens the model is capable of.
+        Also: this method is not tested for multi-sequence inputs!
+        """
         task = "retrieval.passage"
         task_id = self.embedding_model._adaptation_map[task]
 
-        max_seq_length = config.conf.get("index.late_chunking.long_seq_length", 2048)
+        max_seq_length = config.conf.select("index.late_chunking.long_seq_length", 2048)
 
         # only single string `input_text`
         adapter_mask = torch.full((1,), task_id, dtype=torch.int32)
 
-        if len(model_inputs["token_ids"]) <= max_seq_length:
+        if model_inputs["input_ids"].numel() <= max_seq_length:
             with torch.no_grad():
                 model_output = self.embedding_model(**model_inputs, adapter_mask=adapter_mask)
 
@@ -194,12 +199,12 @@ class LateChunkingIndex(Index):
 
         else:
             # Split tokens into overlapping chunks
-            overlap = config.conf.get("index.late_chunking.long_seq_overlap", 256)
+            overlap = config.conf.select("index.late_chunking.long_seq_overlap", 256)
             chunks = []
             chunk_embeddings = []
 
             # Create chunks with overlap
-            for i in range(0, len(model_inputs["token_ids"]), max_seq_length - overlap):
+            for i in range(0, len(model_inputs["input_ids"].squeeze()), max_seq_length - overlap):
                 chunk = {
                     k: v[:, i : i + max_seq_length] if isinstance(v, torch.Tensor) else v
                     for k, v in model_inputs.items()
@@ -216,11 +221,11 @@ class LateChunkingIndex(Index):
             # NOTE: reference implementation of Jina only uses the embeddings of the later chunk
             # https://github.com/jina-ai/late-chunking/blob/main/chunked_pooling/mteb_chunked_eval.py#L128
             token_embeddings = torch.zeros(
-                (len(model_inputs["token_ids"][0]), chunk_embeddings[0].shape[1]),
+                (len(model_inputs["input_ids"][0]), chunk_embeddings[0].shape[1]),
                 dtype=chunk_embeddings[0].dtype,
             )
 
-            counts = torch.zeros(len(model_inputs["token_ids"][0]), dtype=torch.int)
+            counts = torch.zeros(len(model_inputs["input_ids"][0]), dtype=torch.int)
 
             pos = 0
             for chunk_emb in chunk_embeddings:
@@ -244,7 +249,7 @@ class LateChunkingIndex(Index):
             task_prefix + input_text, return_tensors="pt", return_offsets_mapping=True
         )
 
-        token_embeddings = self._get_long_token_embeddings(inputs["input_ids"])
+        token_embeddings = self._get_long_token_embeddings(inputs)
 
         # task prefix was added for Jina v3, correct for that
         token_offsets = inputs["offset_mapping"].squeeze(0).numpy() - len(task_prefix)

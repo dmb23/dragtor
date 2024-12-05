@@ -1,6 +1,7 @@
 import numpy as np
 import pytest
 
+from dragtor import config
 from dragtor.index.index import BasicIndex, LateChunkingIndex
 from dragtor.index.rerank import get_reranker
 from dragtor.index.store import BasicChromaStore
@@ -61,6 +62,18 @@ def test_late_chunking_index_texts(late_chunking_index, text):
     late_chunking_index.index_texts([text])
     collection = late_chunking_index.collection(late_chunking_index.chunk_collection_name)
     assert collection.count() > 0
+
+
+def test_long_token_embeddings(late_chunking_index, text):
+    long_text = text * 10
+    config.conf.index.late_chunking.long_seq_length = 32
+    config.conf.index.late_chunking.long_seq_overlap = 8
+
+    model_inputs = late_chunking_index.tokenizer(
+        long_text, return_tensors="pt", return_offsets_mapping=True
+    )
+    token_output = late_chunking_index._get_long_token_embeddings(model_inputs)
+    assert token_output.numel()
 
 
 def test_late_chunking_query(late_chunking_index, text):

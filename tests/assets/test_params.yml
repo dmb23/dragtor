@@ -17,6 +17,9 @@ store:
     distance: cosine
 index:
   strategy: default
+  late_chunking:
+    long_seq_length: 2048
+    long_seq_overlap: 512
 reranker:
   strategy: default
   n_ranked: 3
