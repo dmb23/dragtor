@@ -13,7 +13,7 @@ class PodcastInformation(BaseModel):
     description: Optional[str] = Field(None, description="Podcast description")
     artwork_url: Optional[str] = Field(None, description="URL to podcast artwork")
     feed_url: Optional[str] = Field(None, description="RSS feed URL")
-    artist: Optional[str]
+    artist: Optional[str] = Field(None, alias="artistName")
 
 
 class EpisodeInformation(BaseModel):
