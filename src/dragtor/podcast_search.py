@@ -9,17 +9,20 @@ import requests
 class PodcastInformation(BaseModel):
     """Information about a podcast from iTunes"""
 
-    podcast_name: str = Field(..., description="Name of the podcast")
+    podcast_name: str = Field(..., description="Name of the podcast", alias="collectionName")
     description: Optional[str] = Field(None, description="Podcast description")
-    artwork_url: Optional[str] = Field(None, description="URL to podcast artwork")
-    feed_url: Optional[str] = Field(None, description="RSS feed URL")
+    artwork_url: Optional[str] = Field(
+        None, description="URL to podcast artwork", alias="artworkUrl100"
+    )
+    feed_url: Optional[str] = Field(None, description="RSS feed URL", alias="feedUrl")
     artist: Optional[str] = Field(None, alias="artistName")
 
 
 class EpisodeInformation(BaseModel):
     podcast: PodcastInformation = Field(..., description="Corresponding podcast")
     title: str
-    episode_nr: int
+    url: str
+    guest: Optional[str]
     description: Optional[str] = Field(None, description="Episode description")
     release_date: Optional[str] = Field(None, description="Release date of episode")
     duration: Optional[str] = Field(None, description="Duration of episode")
@@ -28,6 +31,7 @@ class EpisodeInformation(BaseModel):
 def search_podcasts(podcast_title: str, episode_query: str) -> EpisodeInformation:
     """
     Search for podcast episodes using the iTunes Search API.
+    `episode_query` needs to be verbatim in either the title or the description.
 
     Args:
         podcast_title: Name of the podcast to search for
@@ -51,6 +55,9 @@ def search_podcasts(podcast_title: str, episode_query: str) -> EpisodeInformatio
     if not results.get("results"):
         raise ValueError(f"No podcast found matching '{podcast_title}'")
 
+    for k, v in results["results"][0].items():
+        logger.debug(f"{k}: {v}")
+
     podcast = PodcastInformation.model_validate(results["results"][0])
 
     logger.debug(podcast)
@@ -63,10 +70,26 @@ def search_podcasts(podcast_title: str, episode_query: str) -> EpisodeInformatio
         if episode_query.lower() in entry.title.lower() or (
             hasattr(entry, "description") and episode_query.lower() in entry.description.lower()
         ):
+            for k, v in sorted(entry.items()):
+                logger.debug(f"{k}: {v}")
+            guest = entry.author
+            if guest == podcast.artist:
+                guest = ""
+            url = ""
+            for l in entry.links:
+                if l.type == "audio/mpeg":
+                    url = l.href
+                    break
+            if url == "":
+                raise ValueError(
+                    f"Found no link to audio file for episode {episode_query}\n"
+                    f"Available links: {entry.links}"
+                )
             episode = EpisodeInformation(
                 podcast=podcast,
                 title=entry.title,
-                episode_nr=len(feed.entries) - feed.entries.index(entry),
+                guest=guest,
+                url=url,
                 description=entry.get("description"),
                 release_date=entry.get("published"),
                 duration=entry.get("itunes_duration"),
