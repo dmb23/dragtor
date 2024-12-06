@@ -51,7 +51,7 @@ def search_podcasts(podcast_title: str, episode_query: str) -> EpisodeInformatio
     if not results.get("results"):
         raise ValueError(f"No podcast found matching '{podcast_title}'")
 
-    podcast = PodcastInformation.model_validate_json(results["results"][0])
+    podcast = PodcastInformation.model_validate(results["results"][0])
 
     logger.debug(podcast)
 
