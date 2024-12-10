@@ -10,6 +10,7 @@ class JinaLoader(DataLoader):
 
     This saves the hassle of parsing content of websites manually.
     This costs API credits, the first million are free.
+    TODO: switch to local model for website parsing
 
     Requires `creds.jina` as a key in configuration (credentials.yml) with an API key
     """
