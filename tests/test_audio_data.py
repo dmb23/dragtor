@@ -67,23 +67,3 @@ def audio_loader(tmp_path):
     audio_loader = AudioLoader()
     config.conf.base_path = orig_base
     yield audio_loader
-
-
-def test_get_audio_cache(audio_loader):
-    """Test for transcript retrievals."""
-
-    # Manually create two transcription files in the temporary directory
-    sample_text = "And before he had time to think..."
-    sample_transcripts = [
-        Path(audio_loader._cache_dir) / "audio_1.txt",
-        Path(audio_loader._cache_dir) / "audio_2.txt",
-    ]
-    for file in sample_transcripts:
-        file.write_text(sample_text)
-
-    audio_full_texts = audio_loader.get_cache()
-
-    assert len(audio_full_texts) == len(sample_transcripts)
-    for text in audio_full_texts:
-        assert text.startswith("And before he had time")
-

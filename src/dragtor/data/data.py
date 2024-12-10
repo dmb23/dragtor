@@ -2,8 +2,17 @@ from abc import ABC, abstractmethod
 from pathlib import Path
 
 from loguru import logger
+from pydantic import BaseModel
 
 from dragtor import config
+
+
+class Document(ABC, BaseModel):
+    content: str
+    title: str
+    id: str
+    author: str | None
+    metadata: dict | None
 
 
 class DataLoader(ABC):
@@ -22,7 +31,7 @@ class DataLoader(ABC):
         """Takes sources defined in config and loads them to a cache of text files"""
         pass
 
-    def get_cache(self) -> list[str]:
+    def get_cache(self) -> list[Document]:
         """Get all previously cached text that was loaded to file"""
         full_texts = []
         for fpath in self._cache_dir.glob(self._cache_glob):

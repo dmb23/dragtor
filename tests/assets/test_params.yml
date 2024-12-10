@@ -4,8 +4,9 @@ data:
   cache_dir: "cached/"
   jina_urls:
     - "test_blog"
-  audio_urls:
-    "HF sample": "https://cdn-media.huggingface.co/speech_samples/sample2.flac"
+  podcasts:
+    "The Nugget Climbing":
+      - "EP 237: Yves Gravelle Returns"
 embeddings:
   strategy: default
 store:
