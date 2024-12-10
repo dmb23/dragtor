@@ -40,6 +40,7 @@ from dragtor.index.chunk import Chunker, get_chunker
 from dragtor.index.rerank import Reranker, get_reranker
 from dragtor.index.store import VectorStore, get_store
 from dragtor.utils import ident
+from dragtor.index.store import _flatten_metadata
 
 
 class Index(ABC):
@@ -268,23 +269,40 @@ class LateChunkingIndex(Index):
         return pooled_embeddings
 
     def index_documents(self, documents: list[Document]) -> None:
-        all_chunks, all_ids, all_embeddings = [], [], []
-        for text in texts:
-            chunks, chunk_annotations = self.chunker.chunk_and_annotate(text)
-
-            embeddings = self._calculate_late_embeddings(text, chunk_annotations)
-
+        all_chunks, all_ids, all_embeddings, all_metadata = [], [], [], []
+        
+        for doc in documents:
+            # Get chunks and their positions in the text
+            chunks, chunk_annotations = self.chunker.chunk_and_annotate(doc.content)
+            
+            # Calculate embeddings for chunks
+            embeddings = self._calculate_late_embeddings(doc.content, chunk_annotations)
+            
+            # Generate IDs for chunks
             ids = [ident(chunk) for chunk in chunks]
-
+            
+            # Create metadata for each chunk
+            for _ in chunks:
+                metadata = {
+                    "title": doc.title,
+                    "id": doc.id,
+                    "author": doc.author if doc.author else "",
+                }
+                if doc.metadata:
+                    metadata.update(_flatten_metadata(doc.metadata))
+                all_metadata.append(metadata)
+            
+            # Collect everything
             all_chunks.extend(chunks)
             all_ids.extend(ids)
             all_embeddings.extend(embeddings)
-
-        # Store the chunks, ids, embeddings, and token_chunk_annotations in the vector store
+        
+        # Store everything in the vector store
         self.collection(self.chunk_collection_name).add(
             documents=all_chunks,
             ids=all_ids,
             embeddings=all_embeddings,
+            metadatas=all_metadata
         )
 
     def query(self, question: str) -> list[str]:
