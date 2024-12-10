@@ -65,43 +65,41 @@ class BasicChromaStore(VectorStore):
 
     def add_documents(self, documents: list[Document]) -> None:
         n_init = self.collection.count()
-        
+
         # Process each document separately to maintain metadata connection
         all_chunks = []
         all_ids = []
         all_metadata = []
-        
+
         for doc in documents:
             # Chunk the document
             chunks = self.chunker.chunk_texts([doc.content])
-            
+
             # Create metadata for each chunk
             for chunk in chunks:
                 all_chunks.append(chunk)
                 all_ids.append(ident(chunk))
-                
+
                 # Combine document metadata with chunk-specific info
                 metadata = {
                     "title": doc.title,
                     "id": doc.id,
                     "author": doc.author if doc.author else "",
                 }
+                # TODO: flatten nested metadata
                 if doc.metadata:
                     metadata.update(doc.metadata)
                 all_metadata.append(metadata)
-        
+
         # Generate embeddings
         embeddings = self.embedder.ef(all_chunks)
-        
+
         # Add to collection with metadata
         self.collection.add(
-            documents=all_chunks,
-            ids=all_ids,
-            embeddings=embeddings,
-            metadatas=all_metadata
+            documents=all_chunks, ids=all_ids, embeddings=embeddings, metadatas=all_metadata
         )
         n_post = self.collection.count()
-        
+
         logger.debug(
             f"Tried to add {len(chunks)} new elements to collection, "
             f"size increased from {n_init} to {n_post}"
