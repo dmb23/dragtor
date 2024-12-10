@@ -7,6 +7,7 @@ import chromadb.api
 from loguru import logger
 
 from dragtor import config
+from dragtor.data.data import Document
 from dragtor.index import RetrievalError
 from dragtor.index.chunk import Chunker, get_chunker
 from dragtor.index.embed import Embedder, get_embedder
@@ -16,7 +17,7 @@ from dragtor.utils import ident
 @dataclass
 class VectorStore(ABC):
     @abstractmethod
-    def add_documents(self, documents: list[str], metadata: list[dict] | None = None) -> None:
+    def add_documents(self, documents: list[Document]) -> None:
         pass
 
     @abstractmethod
@@ -62,18 +63,18 @@ class BasicChromaStore(VectorStore):
         )
         logger.debug(f"Collection contains initially {len(self.collection.get()['ids'])} items.")
 
-    def add_documents(self, documents: list[str], metadata: list[dict] | None = None) -> None:
-        chunks = self.chunker.chunk_texts(documents)
-        n_init = self.collection.count()
-        chunks = list(set(chunks))
-        ids = [ident(chunk) for chunk in chunks]
-        embeddings = self.embedder.ef(chunks)
-        self.collection.add(documents=chunks, ids=ids, embeddings=embeddings)
-        n_post = self.collection.count()
-        logger.debug(
-            f"Tried to add {len(chunks)} new elements to collection, "
-            f"size increased from {n_init} to {n_post}"
-        )
+    def add_documents(self, documents: list[Document]) -> None:
+        # chunks = self.chunker.chunk_texts(documents)
+        # n_init = self.collection.count()
+        # chunks = list(set(chunks))
+        # ids = [ident(chunk) for chunk in chunks]
+        # embeddings = self.embedder.ef(chunks)
+        # self.collection.add(documents=chunks, ids=ids, embeddings=embeddings)
+        # n_post = self.collection.count()
+        # logger.debug(
+        #     f"Tried to add {len(chunks)} new elements to collection, "
+        #     f"size increased from {n_init} to {n_post}"
+        # )
 
     def query(self, question: str, n_results: int = 5) -> list[str]:
         embedding = self.embedder.embed_query(question)
@@ -93,4 +94,3 @@ def get_store() -> VectorStore:
             return BasicChromaStore()
         case _:
             raise RetrievalError(f"Unknown strategy for Vector Store: {strat}")
-
