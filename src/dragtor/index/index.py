@@ -269,6 +269,7 @@ class LateChunkingIndex(Index):
 
     def index_documents(self, documents: list[Document]) -> None:
         all_chunks, all_ids, all_embeddings, all_metadata = [], [], [], []
+        seen_ids = set()
 
         for doc in documents:
             # Get chunks and their positions in the text
@@ -277,11 +278,18 @@ class LateChunkingIndex(Index):
             # Calculate embeddings for chunks
             embeddings = self._calculate_late_embeddings(doc.content, chunk_annotations)
 
-            # Generate IDs for chunks
-            ids = [ident(chunk) for chunk in chunks]
-
-            # Create metadata for each chunk
-            for _ in chunks:
+            # Generate IDs for chunks and filter duplicates
+            for chunk, embedding in zip(chunks, embeddings):
+                chunk_id = ident(chunk)
+                if chunk_id in seen_ids:
+                    continue
+                
+                seen_ids.add(chunk_id)
+                all_chunks.append(chunk)
+                all_ids.append(chunk_id)
+                all_embeddings.append(embedding)
+                
+                # Create metadata for the chunk
                 metadata = {
                     "title": doc.title,
                     "id": doc.id,
@@ -291,15 +299,14 @@ class LateChunkingIndex(Index):
                     metadata.update(_flatten_metadata(doc.metadata))
                 all_metadata.append(metadata)
 
-            # Collect everything
-            all_chunks.extend(chunks)
-            all_ids.extend(ids)
-            all_embeddings.extend(embeddings)
-
         # Store everything in the vector store
-        self.collection(self.chunk_collection_name).add(
-            documents=all_chunks, ids=all_ids, embeddings=all_embeddings, metadatas=all_metadata
-        )
+        if all_chunks:  # Only add if we have chunks to store
+            self.collection(self.chunk_collection_name).add(
+                documents=all_chunks,
+                ids=all_ids,
+                embeddings=all_embeddings,
+                metadatas=all_metadata
+            )
 
     def query(self, question: str) -> list[str]:
         task = "retrieval.query"
