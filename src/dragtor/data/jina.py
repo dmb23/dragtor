@@ -66,7 +66,7 @@ class JinaLoader(DataLoader):
                     document = self._load_jina_reader(url, metadata)
                     # Store as JSON to preserve metadata
                     fpath.write_text(
-                        document.json(ensure_ascii=False), 
+                        document.model_dump_json(exclude_none=True),
                         encoding="utf8"
                     )
                     logger.debug(f"Loaded {url} from Jina Reader API")
