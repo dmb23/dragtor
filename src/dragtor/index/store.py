@@ -64,17 +64,28 @@ class BasicChromaStore(VectorStore):
         logger.debug(f"Collection contains initially {len(self.collection.get()['ids'])} items.")
 
     def add_documents(self, documents: list[Document]) -> None:
-        # chunks = self.chunker.chunk_texts(documents)
-        # n_init = self.collection.count()
-        # chunks = list(set(chunks))
-        # ids = [ident(chunk) for chunk in chunks]
-        # embeddings = self.embedder.ef(chunks)
-        # self.collection.add(documents=chunks, ids=ids, embeddings=embeddings)
-        # n_post = self.collection.count()
-        # logger.debug(
-        #     f"Tried to add {len(chunks)} new elements to collection, "
-        #     f"size increased from {n_init} to {n_post}"
-        # )
+        # Extract content from Documents
+        texts = [doc.content for doc in documents]
+        
+        # Chunk the texts
+        chunks = self.chunker.chunk_texts(texts)
+        n_init = self.collection.count()
+        
+        # Remove duplicates while preserving order
+        chunks = list(dict.fromkeys(chunks))
+        
+        # Generate IDs and embeddings
+        ids = [ident(chunk) for chunk in chunks]
+        embeddings = self.embedder.ef(chunks)
+        
+        # Add to collection
+        self.collection.add(documents=chunks, ids=ids, embeddings=embeddings)
+        n_post = self.collection.count()
+        
+        logger.debug(
+            f"Tried to add {len(chunks)} new elements to collection, "
+            f"size increased from {n_init} to {n_post}"
+        )
 
     def query(self, question: str, n_results: int = 5) -> list[str]:
         embedding = self.embedder.embed_query(question)
