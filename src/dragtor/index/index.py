@@ -34,6 +34,7 @@ from transformers import (
 
 from dragtor import config
 from dragtor.config import conf
+from dragtor.data.data import Document
 from dragtor.index import RetrievalError
 from dragtor.index.chunk import Chunker, get_chunker
 from dragtor.index.rerank import Reranker, get_reranker
@@ -43,7 +44,7 @@ from dragtor.utils import ident
 
 class Index(ABC):
     @abstractmethod
-    def index_texts(self, texts: list[str], metadata: list[dict] | None = None) -> None:
+    def index_documents(self, documents: list[Document]) -> None:
         pass
 
     @abstractmethod
@@ -56,8 +57,8 @@ class BasicIndex(Index):
     store: VectorStore
     reranker: Reranker
 
-    def index_texts(self, texts: list[str], metadata: list[dict] | None = None) -> None:
-        self.store.add_documents(texts, metadata)
+    def index_documents(self, documents: list[Document]) -> None:
+        self.store.add_documents(documents)
 
     def query(self, question: str) -> list[str]:
         n_results = config.conf.select("store.n_query", default=5)
@@ -266,7 +267,7 @@ class LateChunkingIndex(Index):
 
         return pooled_embeddings
 
-    def index_texts(self, texts: list[str], metadata: list[dict] | None = None) -> None:
+    def index_documents(self, documents: list[Document]) -> None:
         all_chunks, all_ids, all_embeddings = [], [], []
         for text in texts:
             chunks, chunk_annotations = self.chunker.chunk_and_annotate(text)
