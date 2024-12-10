@@ -64,22 +64,42 @@ class BasicChromaStore(VectorStore):
         logger.debug(f"Collection contains initially {len(self.collection.get()['ids'])} items.")
 
     def add_documents(self, documents: list[Document]) -> None:
-        # Extract content from Documents
-        texts = [doc.content for doc in documents]
-        
-        # Chunk the texts
-        chunks = self.chunker.chunk_texts(texts)
         n_init = self.collection.count()
         
-        # Remove duplicates while preserving order
-        chunks = list(dict.fromkeys(chunks))
+        # Process each document separately to maintain metadata connection
+        all_chunks = []
+        all_ids = []
+        all_metadata = []
         
-        # Generate IDs and embeddings
-        ids = [ident(chunk) for chunk in chunks]
-        embeddings = self.embedder.ef(chunks)
+        for doc in documents:
+            # Chunk the document
+            chunks = self.chunker.chunk_texts([doc.content])
+            
+            # Create metadata for each chunk
+            for chunk in chunks:
+                all_chunks.append(chunk)
+                all_ids.append(ident(chunk))
+                
+                # Combine document metadata with chunk-specific info
+                metadata = {
+                    "title": doc.title,
+                    "id": doc.id,
+                    "author": doc.author if doc.author else "",
+                }
+                if doc.metadata:
+                    metadata.update(doc.metadata)
+                all_metadata.append(metadata)
         
-        # Add to collection
-        self.collection.add(documents=chunks, ids=ids, embeddings=embeddings)
+        # Generate embeddings
+        embeddings = self.embedder.ef(all_chunks)
+        
+        # Add to collection with metadata
+        self.collection.add(
+            documents=all_chunks,
+            ids=all_ids,
+            embeddings=embeddings,
+            metadatas=all_metadata
+        )
         n_post = self.collection.count()
         
         logger.debug(
