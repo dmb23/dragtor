@@ -283,12 +283,12 @@ class LateChunkingIndex(Index):
                 chunk_id = ident(chunk)
                 if chunk_id in seen_ids:
                     continue
-                
+
                 seen_ids.add(chunk_id)
                 all_chunks.append(chunk)
                 all_ids.append(chunk_id)
                 all_embeddings.append(embedding)
-                
+
                 # Create metadata for the chunk
                 metadata = {
                     "title": doc.title,
@@ -302,10 +302,7 @@ class LateChunkingIndex(Index):
         # Store everything in the vector store
         if all_chunks:  # Only add if we have chunks to store
             self.collection(self.chunk_collection_name).add(
-                documents=all_chunks,
-                ids=all_ids,
-                embeddings=all_embeddings,
-                metadatas=all_metadata
+                documents=all_chunks, ids=all_ids, embeddings=all_embeddings, metadatas=all_metadata
             )
 
     def query(self, question: str) -> list[str]:

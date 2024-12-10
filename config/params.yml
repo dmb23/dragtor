@@ -22,8 +22,8 @@ data:
     # "EP 237: Yves Gravelle Returns": https://cdn.simplecast.com/audio/8d0e41cc-be61-4d71-ab0d-b985db72bb92/episodes/5f5ae090-e83f-41f4-971a-606745fee46c/audio/f72232dc-aa71-46de-b77a-2a3188fa7115/default_tc.mp3
 
 chunking:
-  # valid strategies: paragraph [default], jina_tokenizer, recursive_char
-  strategy: recursive_character
+  # valid strategies: paragraph [default], jina_tokenizer, recursive_char, semantic_segmentation
+  strategy: semantic_segmentation
   jina_tokenizer:
     max_chunk_length: 1000
   recursive_character:

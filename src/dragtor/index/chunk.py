@@ -111,23 +111,28 @@ class LCSemanticChunker(Chunker):
 
     def __init__(self) -> None:
         self.embedder = JinaEmbedder()
-        self.splitter = SemanticChunker(self.embedder, breakpoint_threshold_type="percentile")
+        self.splitter = SemanticChunker(
+            self.embedder,
+            breakpoint_threshold_type="percentile",
+        )
 
     def chunk_and_annotate(self, text: str) -> tuple[list[str], list[tuple[int, int]]]:
         chunks = []
         annotations = []
 
-        # Start the count for annotation
-        start_position = 0
+        # The sentence splitting regex in the splitter can change whitespace in the chunks
+        chunk_start = 0
+        chunk_end = 0
         for chunk in self.splitter.split_text(text):
-            # TODO: need to search fuzzily for the chunk, newlines and stuff can be changed
-            chunk_start = text.find(chunk, start_position)
-            chunk_end = chunk_start + len(chunk)
-            assert text[chunk_start:chunk_end] == chunk
+            for char in chunk:
+                if char in " \t\n":
+                    continue
+                chunk_end = text.find(char, chunk_end) + 1
 
-            # Append the list for all chunks & annotation
-            chunks.append(chunk)
+            chunks.append(text[chunk_start:chunk_end])
             annotations.append((chunk_start, chunk_end))
+
+            chunk_start = chunk_end
 
         return chunks, annotations
 
@@ -140,6 +145,8 @@ def get_chunker() -> Chunker:
             return JinaTokenizerChunker()
         case "recursive_character":
             return RecursiveCharacterChunker()
+        case "semantic_segmentation":
+            return LCSemanticChunker()
         case _:
             raise config.ConfigurationError(
                 f"invalid strategy to select chunker: {config.conf.select('chunking.strategy')}"

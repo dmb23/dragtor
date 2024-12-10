@@ -3,15 +3,22 @@
 ## Current Plan
 
 - [x] make sure that late chunking indexing works (stores chunks, allows for retrieval)
-- [ ] include a small `podcast_search podcast_name episode` verb in the cli to easily update the config and get more episodes
-- [ ] start storing metadata
+- [x] ~include a small `podcast_search podcast_name episode` verb in the cli to easily update the config and get more episodes~
+- [x] start storing metadata
     - documents -> id, title, persons
     - chunks -> parent document
 
 ## Possible tasks
 
-- extend the metadata, use it (graphRAG) ?
-    - entity extraction as a first step, then possibly checking the query for entities?
+- [ ] create a better chunking method
+    - Option 1: semantic chunking
+    - Option 2: LLM chunking on sentences
+- [ ]  extend the metadata, use it (like graphRAG) ?
+    - stabilize detection of involved persons for each document
+    - store all those entities somewhere
+    - when a user asks a question: check if it mentions a known entity (langgraph)
+        - optional: ask if this should be used for filtering
+    - filter search results by this entity
 - [ ] use dsPy for prompts
     - use Ragas for tuning metrics
         - generate references via Anthropic / Groq?

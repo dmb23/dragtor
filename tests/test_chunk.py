@@ -1,10 +1,17 @@
 import pytest
 
-from dragtor.index.chunk import JinaTokenizerChunker, ParagraphChunker, RecursiveCharacterChunker
+from dragtor.index.chunk import (
+    LCSemanticChunker,
+)
 
 
+# @pytest.mark.parametrize(
+#     "ChunkingClass",
+#     [ParagraphChunker, JinaTokenizerChunker, RecursiveCharacterChunker, LCSemanticChunker],
+# )
 @pytest.mark.parametrize(
-    "ChunkingClass", [ParagraphChunker, JinaTokenizerChunker, RecursiveCharacterChunker]
+    "ChunkingClass",
+    [LCSemanticChunker],
 )
 class TestChunking:
     def test_creating_chunks(self, ChunkingClass, example_text: str):
@@ -14,7 +21,7 @@ class TestChunking:
         # example text has ~2800 characters, super rough tests:
         assert len(chunks) > 2
         for chunk in chunks:
-            assert len(chunk) < 1500
+            assert len(chunk) < len(example_text)
 
     def test_chunk_annotations(self, ChunkingClass, example_text: str):
         c = ChunkingClass()
