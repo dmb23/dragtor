@@ -1,9 +1,11 @@
 from abc import ABC, abstractmethod
 
+from langchain_experimental.text_splitter import SemanticChunker
 from langchain_text_splitters import RecursiveCharacterTextSplitter
 import requests
 
 from dragtor import config
+from dragtor.index.embed import JinaEmbedder
 
 
 class Chunker(ABC):
@@ -100,6 +102,32 @@ class RecursiveCharacterChunker(Chunker):
 
             # Update start_position value to end position, with excluding overlap
             start_position = chunk_end - self.splitter._chunk_overlap
+
+        return chunks, annotations
+
+
+class LCSemanticChunker(Chunker):
+    """Use Langchain Semantic Chunking"""
+
+    def __init__(self) -> None:
+        self.embedder = JinaEmbedder()
+        self.splitter = SemanticChunker(self.embedder, breakpoint_threshold_type="percentile")
+
+    def chunk_and_annotate(self, text: str) -> tuple[list[str], list[tuple[int, int]]]:
+        chunks = []
+        annotations = []
+
+        # Start the count for annotation
+        start_position = 0
+        for chunk in self.splitter.split_text(text):
+            # TODO: need to search fuzzily for the chunk, newlines and stuff can be changed
+            chunk_start = text.find(chunk, start_position)
+            chunk_end = chunk_start + len(chunk)
+            assert text[chunk_start:chunk_end] == chunk
+
+            # Append the list for all chunks & annotation
+            chunks.append(chunk)
+            annotations.append((chunk_start, chunk_end))
 
         return chunks, annotations
 
