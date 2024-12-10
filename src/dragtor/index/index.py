@@ -38,9 +38,8 @@ from dragtor.data.data import Document
 from dragtor.index import RetrievalError
 from dragtor.index.chunk import Chunker, get_chunker
 from dragtor.index.rerank import Reranker, get_reranker
-from dragtor.index.store import VectorStore, get_store
+from dragtor.index.store import VectorStore, _flatten_metadata, get_store
 from dragtor.utils import ident
-from dragtor.index.store import _flatten_metadata
 
 
 class Index(ABC):
@@ -270,17 +269,17 @@ class LateChunkingIndex(Index):
 
     def index_documents(self, documents: list[Document]) -> None:
         all_chunks, all_ids, all_embeddings, all_metadata = [], [], [], []
-        
+
         for doc in documents:
             # Get chunks and their positions in the text
             chunks, chunk_annotations = self.chunker.chunk_and_annotate(doc.content)
-            
+
             # Calculate embeddings for chunks
             embeddings = self._calculate_late_embeddings(doc.content, chunk_annotations)
-            
+
             # Generate IDs for chunks
             ids = [ident(chunk) for chunk in chunks]
-            
+
             # Create metadata for each chunk
             for _ in chunks:
                 metadata = {
@@ -291,18 +290,15 @@ class LateChunkingIndex(Index):
                 if doc.metadata:
                     metadata.update(_flatten_metadata(doc.metadata))
                 all_metadata.append(metadata)
-            
+
             # Collect everything
             all_chunks.extend(chunks)
             all_ids.extend(ids)
             all_embeddings.extend(embeddings)
-        
+
         # Store everything in the vector store
         self.collection(self.chunk_collection_name).add(
-            documents=all_chunks,
-            ids=all_ids,
-            embeddings=all_embeddings,
-            metadatas=all_metadata
+            documents=all_chunks, ids=all_ids, embeddings=all_embeddings, metadatas=all_metadata
         )
 
     def query(self, question: str) -> list[str]:
