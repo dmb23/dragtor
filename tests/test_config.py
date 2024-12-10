@@ -13,10 +13,10 @@ def test_config_exists():
 def test_config_access():
     # check that basic properties are present
     assert isinstance(config.conf.base_path, str)
-    assert isinstance(config.conf.data.jina_urls, Iterable)
+    assert isinstance(config.conf.data.blogs, Iterable)
     # check that we are working with test config
-    assert "test_blog" in config.conf.data.jina_urls
-    assert len(config.conf.data.jina_urls) == 1
+    assert "test blog" in config.conf.data.blogs
+    assert len(config.conf.data.blogs) == 1
     # check that select method works as expected
     assert isinstance(config.conf.select("model.file_path"), str)
     assert config.conf.select("not.existing.variable", None) is None

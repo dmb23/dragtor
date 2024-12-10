@@ -11,8 +11,8 @@ class Document(ABC, BaseModel):
     content: str
     title: str
     id: str
-    author: str | None
-    metadata: dict | None
+    author: str | None = None
+    metadata: dict | None = None
 
 
 class DataLoader(ABC):

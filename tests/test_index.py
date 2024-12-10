@@ -2,6 +2,7 @@ import numpy as np
 import pytest
 
 from dragtor import config
+from dragtor.data.data import Document
 from dragtor.index.index import BasicIndex, LateChunkingIndex
 from dragtor.index.rerank import get_reranker
 from dragtor.index.store import BasicChromaStore
@@ -13,21 +14,26 @@ def text() -> str:
 
 
 @pytest.fixture
+def doc(text: str) -> Document:
+    return Document(content=text, title="title", id="doc_id_test")
+
+
+@pytest.fixture
 def annotations() -> list[tuple[int, int]]:
     return [(0, 8), (8, 23)]
 
 
-def test_basic_index_loading(text: str, empty_store: BasicChromaStore):
+def test_basic_index_loading(doc: Document, empty_store: BasicChromaStore):
     i = BasicIndex(empty_store, get_reranker())
-    chunks, _ = empty_store.chunker.chunk_and_annotate(text)
+    chunks, _ = empty_store.chunker.chunk_and_annotate(doc.content)
 
-    i.index_texts([text])
+    i.index_documents([doc])
     assert empty_store.collection.count() == len(chunks)
 
 
-def test_basic_index_query(text: str, full_store):
+def test_basic_index_query(doc, full_store):
     i = BasicIndex(full_store, get_reranker())
-    i.index_texts([text])
+    i.index_documents([doc])
 
     res = i.query("empty query prompt")
     assert len(res) > 0
@@ -58,8 +64,8 @@ def test_map_chunks_to_tokens(late_chunking_index):
     assert token_chunks[1] == (2, 3)  # Second chunk is the last token
 
 
-def test_late_chunking_index_texts(late_chunking_index, text):
-    late_chunking_index.index_texts([text])
+def test_late_chunking_index_texts(late_chunking_index, doc):
+    late_chunking_index.index_documents([doc])
     collection = late_chunking_index.collection(late_chunking_index.chunk_collection_name)
     assert collection.count() > 0
 
@@ -76,8 +82,8 @@ def test_long_token_embeddings(late_chunking_index, text):
     assert token_output.numel()
 
 
-def test_late_chunking_query(late_chunking_index, text):
-    late_chunking_index.index_texts([text])
+def test_late_chunking_query(late_chunking_index, doc):
+    late_chunking_index.index_documents([doc])
     results = late_chunking_index.query("test query")
 
     assert isinstance(results, list)

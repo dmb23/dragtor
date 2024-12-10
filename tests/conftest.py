@@ -6,6 +6,7 @@ from omegaconf import OmegaConf
 import pytest
 
 from dragtor import config
+from dragtor.data.data import Document
 from dragtor.index import store
 
 
@@ -81,6 +82,7 @@ def empty_store() -> store.BasicChromaStore:
 
 @pytest.fixture
 def full_store(empty_store: store.BasicChromaStore, example_text: str) -> store.BasicChromaStore:
-    empty_store.add_documents(example_text.split("\n\n"))
+    doc = Document(content=example_text, title="Fixture Title", id="doc_id_fixture")
+    empty_store.add_documents([doc])
 
     return empty_store
