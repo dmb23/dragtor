@@ -2,8 +2,11 @@ project_path: "/Users/mischa/Projects/local/dragtor"
 base_path: "/Users/mischa/Projects/local/dragtor/tests/assets"
 data:
   cache_dir: "cached/"
-  jina_urls:
-    - "test_blog"
+  blogs:
+    test blog:
+      author: "Test McAuthor"
+      entries:
+        - "test_blog"
   podcasts:
     "The Nugget Climbing":
       - "EP 237: Yves Gravelle Returns"

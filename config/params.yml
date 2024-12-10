@@ -3,12 +3,19 @@ expose_library_logs: False # allows to use loguru for external loggers
 
 data:
   cache_dir: "cached/"
-  jina_urls:
-    - "https://www.hoopersbeta.com/library/a2-pulley-manual-for-climbers"
-    - "https://www.hoopersbeta.com/library/weight-training-and-rock-climbing"
-    - "https://www.hoopersbeta.com/library/how-to-heal-from-a-lumbrical-injury-5-simple-stages-to-recover"
-    - "https://www.hoopersbeta.com/library/flexor-tenosynovitis"
-    - "https://www.hoopersbeta.com/library/will-hangboarding-2x/day-improve-your-climbing-ultimate-revised-breakdown"    
+  blogs:
+    "Hoopers Beta":
+      author: "Jason Hooper"
+      entries:
+        - "https://www.hoopersbeta.com/library/a2-pulley-manual-for-climbers"
+        - "https://www.hoopersbeta.com/library/weight-training-and-rock-climbing"
+        - "https://www.hoopersbeta.com/library/how-to-heal-from-a-lumbrical-injury-5-simple-stages-to-recover"
+        - "https://www.hoopersbeta.com/library/flexor-tenosynovitis"
+        - "https://www.hoopersbeta.com/library/will-hangboarding-2x/day-improve-your-climbing-ultimate-revised-breakdown"    
+    "Training Beta":
+      author: "Shaina Savoy"
+      entries:
+        - "https://www.trainingbeta.com/plant-based-nutrition-for-climbers/"
   podcasts:
     "The Nugget Climbing":
       - "EP 237: Yves Gravelle Returns"
