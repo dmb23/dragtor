@@ -2,7 +2,7 @@ from loguru import logger
 import requests
 
 from dragtor import config
-from dragtor.data import DataLoader
+from dragtor.data.data import Document, DataLoader
 
 
 class JinaLoader(DataLoader):
@@ -16,11 +16,11 @@ class JinaLoader(DataLoader):
     """
 
     def __init__(self, *args, **kwargs):
-        kwargs.update({"cache_glob": "jina_*.md"})
+        kwargs.update({"cache_glob": "jina_*.json"})  # Change to JSON to store metadata
         super().__init__(*args, **kwargs)
         self._jina_base: str = "https://r.jina.ai/"
 
-    def _load_jina_reader(self, url: str) -> str:
+    def _load_jina_reader(self, url: str, metadata: dict) -> Document:
         try:
             api_key = config.conf.creds.jina
         except AttributeError:
@@ -32,25 +32,54 @@ class JinaLoader(DataLoader):
         response = requests.get(jina_url, headers=headers)
         response.raise_for_status()
 
-        return response.text
+        return Document(
+            content=response.text,
+            title=metadata.get("title", url.split("/")[-1]),
+            id=f"jina_{url.replace('/', '_')}",
+            author=metadata.get("author"),
+            metadata={
+                "source": url,
+                "source_type": "blog",
+                **metadata
+            }
+        )
 
     def load_to_cache(self) -> None:
-        """Load text from Jina Reader API for a list of URLs and cache to files"""
-        urls = config.conf.data.jina_urls
-        if isinstance(urls, str):
-            urls = [urls]
-        logger.debug(f"loading jina reader urls:\n{urls}")
-
+        """Load text and metadata from Jina Reader API for URLs and cache to files"""
+        blog_config = config.conf.data.blogs
+        
         counter = 0
-        for url in urls:
-            fpath = self._cache_dir / f"jina_{url.replace('/', '_')}.md"
-            try:
-                fpath.read_text(encoding="utf8")
-                logger.debug(f"Already cached {url}")
-            except IOError:
-                full_text = self._load_jina_reader(url)
-                fpath.write_text(full_text, encoding="utf8")
-                logger.debug(f"Loaded {url} from Jina Reader API")
-                counter += 1
+        for blog_name, blog_info in blog_config.items():
+            author = blog_info.get("author")
+            for url in blog_info.get("entries", []):
+                metadata = {
+                    "blog_name": blog_name,
+                    "author": author,
+                }
+                
+                fpath = self._cache_dir / f"jina_{url.replace('/', '_')}.json"
+                try:
+                    # Skip if already cached
+                    fpath.read_text(encoding="utf8")
+                    logger.debug(f"Already cached {url}")
+                except IOError:
+                    document = self._load_jina_reader(url, metadata)
+                    # Store as JSON to preserve metadata
+                    fpath.write_text(
+                        document.json(ensure_ascii=False), 
+                        encoding="utf8"
+                    )
+                    logger.debug(f"Loaded {url} from Jina Reader API")
+                    counter += 1
 
         logger.info(f"Loaded {counter} urls via Jina Reader API")
+    def get_cache(self) -> list[Document]:
+        """Override parent method to handle JSON documents with metadata"""
+        documents = []
+        for fpath in self._cache_dir.glob(self._cache_glob):
+            logger.debug(f"loading cached file {fpath}")
+            # Parse JSON back into Document
+            document = Document.parse_file(fpath)
+            documents.append(document)
+
+        return documents
