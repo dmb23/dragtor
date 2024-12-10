@@ -11,7 +11,26 @@ from dragtor.data.data import Document
 from dragtor.index import RetrievalError
 from dragtor.index.chunk import Chunker, get_chunker
 from dragtor.index.embed import Embedder, get_embedder
+from typing import Any
+
 from dragtor.utils import ident
+
+
+def _flatten_metadata(metadata: dict, prefix: str = "") -> dict[str, str]:
+    """Flatten nested metadata dictionary into dot notation.
+    
+    Example:
+        {"a": {"b": "c"}} becomes {"a.b": "c"}
+    """
+    flattened = {}
+    for key, value in metadata.items():
+        new_key = f"{prefix}{key}" if prefix else key
+        if isinstance(value, dict):
+            flattened.update(_flatten_metadata(value, f"{new_key}."))
+        else:
+            # Convert any non-string values to strings
+            flattened[new_key] = str(value)
+    return flattened
 
 
 @dataclass
@@ -86,9 +105,8 @@ class BasicChromaStore(VectorStore):
                     "id": doc.id,
                     "author": doc.author if doc.author else "",
                 }
-                # TODO: flatten nested metadata
                 if doc.metadata:
-                    metadata.update(doc.metadata)
+                    metadata.update(_flatten_metadata(doc.metadata))
                 all_metadata.append(metadata)
 
         # Generate embeddings
