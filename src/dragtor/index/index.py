@@ -152,30 +152,39 @@ class LateChunkingIndex(Index):
     def _map_chunks_to_tokens(
         self, chunk_annotations: list[tuple[int, int]], token_offsets: np.ndarray
     ) -> list[tuple[int, int]]:
-        """Translate chunk boundaries from text to token space"""
+        """Translate chunk boundaries from text to token space, handling misalignments
+
+        Semantic Segmentation needs to adjust chunk boundaries slightly,
+        this can lead to misalignment with tokens.
+
+        Especially when using late chunking, the exact boundaries of chunks in token space
+        should not matter that much.
+        """
         logger.debug(f"Mapping {len(chunk_annotations)} chunks onto {len(token_offsets)} tokens")
-        # Convert chunk annotations to NumPy arrays
-        ann = np.array(chunk_annotations)
+        token_chunk_annotations = []
 
-        # Find start token indices
-        start_conditions = (token_offsets[:, 0][:, np.newaxis] <= ann[:, 0]) & (
-            token_offsets[:, 1][:, np.newaxis] > ann[:, 0]
-        )
-        start_tokens = np.argmax(start_conditions, axis=0)
+        for chunk_start, chunk_end in chunk_annotations:
+            # For start: find token whose span contains or is closest after chunk_start
+            start_distances = np.where(
+                token_offsets[:, 1] > chunk_start, token_offsets[:, 0] - chunk_start, np.inf
+            )
+            start_token = np.argmin(np.abs(start_distances))
 
-        # Find end token indices
-        end_conditions = (token_offsets[:, 0][:, np.newaxis] < ann[:, 1]) & (
-            token_offsets[:, 1][:, np.newaxis] >= ann[:, 1]
-        )
-        end_tokens = np.argmax(end_conditions, axis=0) + 1  # end_token is exclusive
+            # For end: find token whose span contains or is closest before chunk_end
+            end_distances = np.where(
+                token_offsets[:, 0] < chunk_end, token_offsets[:, 1] - chunk_end, -np.inf
+            )
+            end_token = np.argmin(np.abs(end_distances)) + 1  # +1 for exclusive end
 
-        # Check for any unmapped boundaries
-        if not np.all(start_conditions[start_tokens, np.arange(len(chunk_annotations))]):
-            raise ValueError("Could not map some chunk boundaries to tokens.")
-        if not np.all(end_conditions[end_tokens - 1, np.arange(len(chunk_annotations))]):
-            raise ValueError("Could not map some chunk boundaries to tokens.")
+            # Ensure we have valid token spans
+            if start_token >= end_token:
+                logger.warning(
+                    f"Invalid token span [{start_token}, {end_token}] for chunk [{chunk_start}, {chunk_end}]"
+                )
+                end_token = start_token + 1
 
-        token_chunk_annotations = list(zip(start_tokens, end_tokens))
+            token_chunk_annotations.append((start_token, end_token))
+
         return token_chunk_annotations
 
     def _get_long_token_embeddings(self, model_inputs):
